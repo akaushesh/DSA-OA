@@ -1,0 +1,33 @@
+@import "tailwindcss";
+/* Hide scrollbar for all browsers */
+.custom-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.custom-scrollbar-hide {
+  -ms-overflow-style: none;  /* IE/Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  /* background-color: #0f0f1c; match your app's background */
+}
+
+/* Hide scrollbar while retaining scroll functionality */
+.custom-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.custom-scrollbar-hide {
+  -ms-overflow-style: none; /* IE & Edge */
+  scrollbar-width: none;    /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
