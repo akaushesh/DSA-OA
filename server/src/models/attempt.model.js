@@ -1,0 +1,15 @@
+import mongoose, { Schema } from 'mongoose';
+
+const attemptSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  questionSetId: { type: Schema.Types.ObjectId, ref: 'QuestionSet', required: true },
+  startedAt: { type: Date, default: Date.now },
+  endedAt: Date,
+  timingMode: { type: String, enum: ['per_problem', 'collective'] },
+  totalTimeLimit: Number,  // copied from set at start
+  submissions: [{ type: Schema.Types.ObjectId, ref: 'Submission' }],
+  score: { type: Number, default: 0 },
+  status: { type: String, enum: ['in_progress', 'completed', 'timed_out'], default: 'in_progress' },
+}, { timestamps: true });
+
+export const Attempt = mongoose.model('Attempt', attemptSchema, 'attempts');
