@@ -14,6 +14,22 @@ html, body, #root {
   background-color: #0b132b; 
 }
 
+/* Global Dark Scrollbars (prevents default white browser scrollbars) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b132b;
+}
+::-webkit-scrollbar-thumb {
+  background: #1f2c4b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334570;
+}
+
 /* Hide scrollbar while retaining scroll functionality */
 .custom-scrollbar-hide::-webkit-scrollbar {
   display: none;

@@ -58,10 +58,7 @@ export default function CodingArena() {
   const [adminStoppedModal, setAdminStoppedModal] = useState(false);
 
   // Layout Management State: Hideable Sidebar & Resizable Panes
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    const saved = localStorage.getItem('oa_sidebar_open');
-    return saved !== null ? saved === 'true' : true;
-  });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [splitPercent, setSplitPercent] = useState(() => {
     const saved = localStorage.getItem('oa_split_percent');
     return saved ? Math.min(75, Math.max(20, parseFloat(saved))) : 45;
@@ -507,6 +504,36 @@ export default function CodingArena() {
   const allExpired = attempt?.timingMode === 'per_problem' && allProblems.length > 0 &&
     allProblems.every(p => (problemTimers[p._id || p] ?? 1) <= 0);
 
+  const [problemLockedModal, setProblemLockedModal] = useState(false);
+
+  useEffect(() => {
+    if (attempt?.timingMode !== 'per_problem') return;
+    if (isCurrentLocked && !allExpired) {
+      setProblemLockedModal(true);
+    } else {
+      setProblemLockedModal(false);
+    }
+  }, [isCurrentLocked, allExpired, attempt?.timingMode, problemId]);
+
+  const handleLockedProceed = async () => {
+    setProblemLockedModal(false);
+    await flushTimers();
+    // 1. Try to find the next problem after current that is not locked
+    const nextUnlocked = allProblems.find((p, idx) => idx > currentIndex && (problemTimers[p._id || p] ?? 1) > 0);
+    if (nextUnlocked) {
+      navigate(`/attempt/${attemptId}/problem/${nextUnlocked._id || nextUnlocked}`);
+      return;
+    }
+    // 2. Try to find any other unlocked problem in the question set
+    const anyUnlocked = allProblems.find(p => (problemTimers[p._id || p] ?? 1) > 0);
+    if (anyUnlocked) {
+      navigate(`/attempt/${attemptId}/problem/${anyUnlocked._id || anyUnlocked}`);
+      return;
+    }
+    // 3. If no unlocked questions remain, open completion submission dialog
+    handleEndAttempt();
+  };
+
   const [isEndModalOpen, setIsEndModalOpen] = useState(false);
 
   const handleEndAttempt = () => {
@@ -586,13 +613,7 @@ export default function CodingArena() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => {
-              setSidebarOpen(prev => {
-                const next = !prev;
-                localStorage.setItem('oa_sidebar_open', String(next));
-                return next;
-              });
-            }}
+            onClick={() => setSidebarOpen(prev => !prev)}
             title={sidebarOpen ? "Hide sidebar (give more space to code)" : "Show question list"}
             className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition ${
               sidebarOpen
@@ -613,8 +634,8 @@ export default function CodingArena() {
           </div>
         </div>
 
-        {/* Center: PROMINENT LIVE TIMER PILL */}
-        <div className="flex items-center justify-center">
+        {/* Center: PROMINENT LIVE TIMER PILL + MARK FOR REVIEW */}
+        <div className="flex items-center justify-center gap-3">
           {attempt?.timingMode === 'per_problem' ? (() => {
             const secs = problemTimers[problemId] ?? 0;
             const locked = secs <= 0;
@@ -647,12 +668,56 @@ export default function CodingArena() {
               </div>
             );
           })()}
+
+          {/* Mark for Review Button in Header */}
+          <button
+            type="button"
+            onClick={toggleMarkForReview}
+            className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition flex items-center gap-1.5 shadow-sm ${
+              isMarked
+                ? 'bg-amber-500 text-slate-900 border-amber-400 font-extrabold shadow'
+                : 'bg-[#18223a] text-slate-300 border-[#243352] hover:text-white hover:border-slate-500'
+            }`}
+            title="Bookmark this problem for review"
+          >
+            <span>🔖</span>
+            <span className="hidden sm:inline">{isMarked ? 'Marked' : 'Mark for Review'}</span>
+          </button>
         </div>
 
-        {/* Right: Section Indicators & End Action */}
+        {/* Right: Split Presets, Section Indicators & End Action */}
         <div className="flex items-center gap-3">
+          {/* Quick Split Presets (only for coding problems) */}
+          {!hasMcqOptions && (
+            <div className="hidden sm:flex items-center gap-1 bg-[#0a101f] border border-[#202d4b] rounded-xl p-1 shadow-inner">
+              <span className="text-[10px] text-slate-400 font-bold uppercase px-1.5 hidden md:inline">Split</span>
+              {[
+                { label: '35%', val: 35 },
+                { label: '50%', val: 50 },
+                { label: '65%', val: 65 },
+              ].map(preset => (
+                <button
+                  key={preset.val}
+                  type="button"
+                  onClick={() => {
+                    setSplitPercent(preset.val);
+                    localStorage.setItem('oa_split_percent', preset.val.toString());
+                  }}
+                  className={`px-2 py-0.5 text-[10px] font-mono rounded-lg transition font-semibold ${
+                    Math.round(splitPercent) === preset.val
+                      ? 'bg-sky-600 text-white font-bold shadow'
+                      : 'text-slate-400 hover:text-white hover:bg-[#182442]'
+                  }`}
+                  title={`Set Question/Code split to ${preset.label}`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {sections.length > 1 && (
-            <div className="hidden lg:flex items-center gap-1.5">
+            <div className="hidden xl:flex items-center gap-1.5">
               {sections.map((sec, idx) => (
                 <span
                   key={sec.name}
@@ -682,7 +747,8 @@ export default function CodingArena() {
       <div className="flex flex-1 overflow-hidden relative">
         
         {/* LEFT SIDEBAR: SECTION LIST & QUESTION MAP */}
-        <div className={`${sidebarOpen ? 'w-64' : 'w-0 hidden'} transition-all duration-200 bg-[#0d1527] border-r border-[#1f2c4b] flex flex-col justify-between overflow-hidden flex-shrink-0 z-20`}>
+        {sidebarOpen && (
+          <div className="w-64 bg-[#0d1527] border-r border-[#1f2c4b] flex flex-col justify-between overflow-hidden flex-shrink-0 z-20 shadow-2xl">
           
           <div className="p-4 overflow-y-auto space-y-6">
             
@@ -730,7 +796,14 @@ export default function CodingArena() {
                     <button
                       key={pId || idx}
                       type="button"
-                      onClick={async () => { await flushTimers(); navigate(`/attempt/${attemptId}/problem/${pId}`); }}
+                      onClick={async () => {
+                        if (isLocked) {
+                          toast.error(`Question ${idx + 1} time expired and is locked.`);
+                          return;
+                        }
+                        await flushTimers();
+                        navigate(`/attempt/${attemptId}/problem/${pId}`);
+                      }}
                       className={`w-9 h-9 rounded-xl text-xs font-bold transition flex items-center justify-center relative border ${
                         isActive
                           ? 'bg-purple-600 text-white border-purple-400 ring-2 ring-purple-400/50 shadow-md'
@@ -788,22 +861,7 @@ export default function CodingArena() {
           </div>
 
         </div>
-
-        {/* Floating Sidebar Re-open Pill when hidden */}
-        {!sidebarOpen && (
-          <button
-            type="button"
-            onClick={() => {
-              setSidebarOpen(true);
-              localStorage.setItem('oa_sidebar_open', 'true');
-            }}
-            className="absolute left-3 bottom-3 z-30 bg-[#141e36]/90 hover:bg-[#1d2b4d] border border-purple-700/60 hover:border-purple-500 text-purple-200 hover:text-white px-3 py-2 rounded-xl shadow-2xl backdrop-blur transition flex items-center gap-1.5 text-xs font-bold group"
-            title="Open Question Map & Sections"
-          >
-            <span className="group-hover:translate-x-0.5 transition-transform">▶</span>
-            <span>Questions ({currentQNum}/{allProblems.length})</span>
-          </button>
-        )}
+      )}
 
         {/* RIGHT MAIN PANEL: PROBLEM DETAILS & CODING INTERFACE */}
         <div
@@ -819,7 +877,7 @@ export default function CodingArena() {
             
             {/* Sub-Header Tabs */}
             <div className="flex items-center justify-between border-b border-[#1f2c4b] bg-[#11192e] px-4 py-2 flex-shrink-0 gap-2">
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+              <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar-hide">
                 <span className="bg-purple-950/80 border border-purple-700 text-purple-300 font-extrabold text-xs px-2.5 py-1 rounded-lg flex-shrink-0">
                   Q{currentQNum} / {allProblems.length}
                 </span>
@@ -855,49 +913,6 @@ export default function CodingArena() {
                     </button>
                   </>
                 )}
-              </div>
-
-              {/* Controls: Quick Split Presets + Mark for Review */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {!hasMcqOptions && (
-                  <div className="hidden sm:flex items-center gap-1 bg-[#090e1c] border border-[#1e2a47] rounded-lg p-0.5">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase px-1">Split</span>
-                    {[
-                      { label: '35%', val: 35 },
-                      { label: '50%', val: 50 },
-                      { label: '65%', val: 65 },
-                    ].map(preset => (
-                      <button
-                        key={preset.val}
-                        type="button"
-                        onClick={() => {
-                          setSplitPercent(preset.val);
-                          localStorage.setItem('oa_split_percent', preset.val.toString());
-                        }}
-                        className={`px-1.5 py-0.5 text-[10px] font-mono rounded transition ${
-                          Math.round(splitPercent) === preset.val
-                            ? 'bg-sky-600 text-white font-bold'
-                            : 'text-slate-400 hover:text-white'
-                        }`}
-                        title={`Set Question pane to ${preset.val}%`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={toggleMarkForReview}
-                  className={`text-xs font-bold px-3 py-1 rounded-lg border transition flex items-center gap-1.5 ${
-                    isMarked
-                      ? 'bg-amber-500 text-slate-900 border-amber-400 font-extrabold shadow'
-                      : 'bg-[#18223a] text-slate-300 border-[#2a3656] hover:text-white'
-                  }`}
-                >
-                  <span>🔖</span> <span className="hidden md:inline">{isMarked ? 'Marked' : 'Mark for Review'}</span>
-                </button>
               </div>
             </div>
 
@@ -1340,7 +1355,7 @@ export default function CodingArena() {
             </div>
 
             {/* BOTTOM STEPPER NAV */}
-            <div className="p-3.5 bg-[#11192e] border-t border-[#1f2c4b] flex items-center justify-between">
+            <div className="p-3.5 bg-[#11192e] border-t border-[#1f2c4b] flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={handlePrevProblem}
@@ -1451,6 +1466,40 @@ export default function CodingArena() {
           navigate(`/review/${attemptId}`);
         }}
       />
+
+      {/* Problem Locked / Time Expired Modal */}
+      {problemLockedModal && !allExpired && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 select-none">
+          <div className="bg-[#11192e] border border-[#233558] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-rose-950/60 border border-rose-800/80 flex items-center justify-center mx-auto text-xl">
+              ⏱
+            </div>
+            <div>
+              <span className="inline-block text-xs font-mono font-bold text-rose-400 bg-rose-950/40 border border-rose-800/60 px-2.5 py-0.5 rounded-full mb-2">
+                Question {currentQNum} Locked
+              </span>
+              <h3 className="text-lg font-extrabold text-white">Time Expired for this Question</h3>
+            </div>
+            <p className="text-slate-300 text-sm leading-relaxed">
+              The time limit for Question {currentQNum} has elapsed. All code and answers recorded up to this point have been saved.
+            </p>
+            <p className="text-slate-400 text-xs leading-relaxed">
+              {currentIndex < allProblems.length - 1
+                ? 'Click below to advance to the next question in the test.'
+                : 'You have reached the end of the question set. Click below to review or finalize your test.'}
+            </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleLockedProceed}
+                className="w-full px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition shadow-lg shadow-blue-950/50 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>{currentIndex < allProblems.length - 1 ? 'Proceed to Next Question →' : 'Review & Submit Assessment →'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admin Stopped Assessment Overlay */}
       {adminStoppedModal && (
