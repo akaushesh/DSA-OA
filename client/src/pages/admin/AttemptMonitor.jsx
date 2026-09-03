@@ -10,6 +10,7 @@ import {
   stopAttempt,
 } from '../../api/attempts';
 import Navbar from '../../components/Navbar';
+import { calculateAttemptScoreBreakdown, getDifficultyPoints, calculateProblemScore } from '../../utils/scoring';
 
 export default function AttemptMonitor() {
   const [attempts, setAttempts] = useState([]);
@@ -153,6 +154,7 @@ export default function AttemptMonitor() {
     }
 
     const progressPercent = totalProblems > 0 ? Math.round((solvedCount / totalProblems) * 100) : 0;
+    const scoreBreakdown = calculateAttemptScoreBreakdown(problems, submissions);
 
     return {
       problems,
@@ -164,6 +166,7 @@ export default function AttemptMonitor() {
       timeInfo,
       isExpired,
       progressPercent,
+      scoreBreakdown,
     };
   }, []);
 
@@ -559,24 +562,30 @@ export default function AttemptMonitor() {
 
                     {/* Progress Indicator & Problem Matrix */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-8 shrink-0">
-                      {/* Solved Progress */}
-                      <div className="w-48 sm:w-44">
-                        <div className="flex justify-between items-center text-xs mb-1.5 font-semibold">
-                          <span className="text-slate-400">Progress</span>
+                      {/* Solved Progress & Score */}
+                      <div className="w-56 sm:w-52">
+                        <div className="flex justify-between items-center text-xs mb-1 font-semibold">
+                          <span className="text-amber-300 font-bold">🏆 Score</span>
                           <span className="text-white font-mono font-bold">
-                            {metrics.solvedCount} / {metrics.totalProblems} AC ({metrics.progressPercent}%)
+                            {metrics.scoreBreakdown?.totalScore || 0} / {metrics.scoreBreakdown?.maxPossibleScore || 0} pts ({metrics.scoreBreakdown?.percentage || 0}%)
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-[11px] mb-1.5">
+                          <span className="text-slate-400">Solved AC</span>
+                          <span className="text-slate-300 font-mono">
+                            {metrics.solvedCount} / {metrics.totalProblems}
                           </span>
                         </div>
                         <div className="w-full h-2 bg-[#080d1a] rounded-full overflow-hidden border border-[#1f2c4b]">
                           <div
                             className={`h-full transition-all duration-500 rounded-full ${
-                              metrics.progressPercent === 100
+                              metrics.scoreBreakdown?.percentage === 100
                                 ? 'bg-emerald-400'
-                                : metrics.progressPercent > 0
-                                ? 'bg-purple-500'
+                                : metrics.scoreBreakdown?.percentage > 0
+                                ? 'bg-amber-400'
                                 : 'bg-slate-700'
                             }`}
-                            style={{ width: `${Math.max(5, metrics.progressPercent)}%` }}
+                            style={{ width: `${Math.max(5, metrics.scoreBreakdown?.percentage || 0)}%` }}
                           />
                         </div>
                         <p className="text-[10px] text-slate-400 mt-1 font-mono">{metrics.timeInfo}</p>
@@ -873,6 +882,9 @@ export default function AttemptMonitor() {
                                     }`}
                                   >
                                     {p.difficulty}
+                                  </span>
+                                  <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-950/60 border border-amber-800/60 px-2 py-0.5 rounded">
+                                    Score: {metrics.scoreBreakdown?.problemScores?.[pId] || 0} / {getDifficultyPoints(p.difficulty).totalPoints} pts
                                   </span>
                                 </div>
 

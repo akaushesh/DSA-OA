@@ -5,6 +5,7 @@ import { Submission } from '../models/submission.model.js';
 import { Problem } from '../models/problem.model.js';
 import { Attempt } from '../models/attempt.model.js';
 import { runAllTestCases } from '../services/judge0.service.js';
+import { calculateProblemScore, calculateAttemptScoreBreakdown } from '../utils/scoring.js';
 
 export const submitCode = asyncHandler(async (req, res) => {
   const { problemId, questionSetId, attemptId, language, code } = req.body;
@@ -51,6 +52,8 @@ export const submitCode = asyncHandler(async (req, res) => {
       memoryLimit: problem.memoryLimit || 256,
     });
 
+    const score = calculateProblemScore(problem.difficulty, result.passedTests, result.totalTests);
+
     await Submission.findByIdAndUpdate(submission._id, {
       status: 'done',
       verdict: result.verdict,
@@ -58,13 +61,30 @@ export const submitCode = asyncHandler(async (req, res) => {
       totalTests: result.totalTests,
       runtime: result.runtime,
       memory: result.memory,
+      score,
       compileError: result.compileError,
       testResults: result.testResults,
     });
 
-    // Link submission to attempt
+    // Link submission to attempt and update attempt score taking MAX per question
     if (attemptId) {
       await Attempt.findByIdAndUpdate(attemptId, { $addToSet: { submissions: submission._id } });
+
+      const attempt = await Attempt.findById(attemptId)
+        .populate({
+          path: 'questionSetId',
+          populate: { path: 'problems', select: 'difficulty' },
+        })
+        .populate('submissions', 'problemId score passedTests totalTests');
+
+      if (attempt?.questionSetId?.problems && attempt?.submissions) {
+        const { totalScore } = calculateAttemptScoreBreakdown(
+          attempt.questionSetId.problems,
+          attempt.submissions
+        );
+        attempt.score = totalScore;
+        await attempt.save();
+      }
     }
   } catch (err) {
     await Submission.findByIdAndUpdate(submission._id, { status: 'error', verdict: 'RE' });

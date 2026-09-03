@@ -438,6 +438,8 @@ export default function UserManager() {
                               <p className="text-xs text-slate-400 font-mono flex items-center gap-2 flex-wrap">
                                 <span>Mode: {att.timingMode}</span>
                                 <span>•</span>
+                                <span className="font-bold text-amber-300">Score: {att.score || 0} pts</span>
+                                <span>•</span>
                                 <span>
                                   Solved: <strong className="text-emerald-400">{uniqueAcCount}</strong> / {totalProbs} Problems AC
                                 </span>

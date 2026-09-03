@@ -7,6 +7,7 @@ import Loader from '../components/Loader';
 import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
 import ModalConfirm from '../components/ModalConfirm';
+import { calculateProblemScore, getDifficultyPoints, calculateAttemptScoreBreakdown } from '../utils/scoring';
 
 export default function ReviewResults() {
   const { attemptId } = useParams();
@@ -64,6 +65,22 @@ export default function ReviewResults() {
       const totalRuntimeMs = pSubs.reduce((acc, s) => acc + (s.runtime || 500), 0);
       const timeTakenSec = Math.max(12, Math.round(totalRuntimeMs / 1000) + (pSubs.length * 45));
 
+      // Calculate MAX score achieved across all submissions for this question
+      const diffRules = getDifficultyPoints(p.difficulty);
+      const maxPossiblePoints = diffRules.totalPoints;
+
+      let maxScore = 0;
+      let bestSub = null;
+      pSubs.forEach(s => {
+        const sScore = s.score !== undefined && s.score !== null
+          ? s.score
+          : calculateProblemScore(p.difficulty, s.passedTests, s.totalTests);
+        if (sScore >= maxScore) {
+          maxScore = sScore;
+          bestSub = s;
+        }
+      });
+
       return {
         problem: p,
         index: index + 1,
@@ -71,18 +88,31 @@ export default function ReviewResults() {
         status,
         submissions: pSubs,
         latestSub,
+        bestSub: bestSub || latestSub,
+        maxScore,
+        maxPossiblePoints,
         hasAC,
         timeTakenSec: hasAttempted ? timeTakenSec : 0,
       };
     });
   }, [problems, subsByProblem, setInfo]);
 
-  // Overall Metrics
+  // Overall Metrics & Score Calculations (Takes MAX score per question)
   const totalQuestions = problems.length;
   const correctCount = problemStats.filter(p => p.status === 'correct').length;
   const incorrectCount = problemStats.filter(p => p.status === 'incorrect').length;
   const skippedCount = problemStats.filter(p => p.status === 'skipped').length;
   const accuracyRate = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+
+  const totalScore = useMemo(() => {
+    return problemStats.reduce((acc, p) => acc + p.maxScore, 0);
+  }, [problemStats]);
+
+  const totalPossibleScore = useMemo(() => {
+    return problemStats.reduce((acc, p) => acc + p.maxPossiblePoints, 0);
+  }, [problemStats]);
+
+  const scorePercentage = totalPossibleScore > 0 ? Math.round((totalScore / totalPossibleScore) * 100) : 0;
 
   // Sections Breakdown
   const sectionBreakdown = useMemo(() => {
@@ -344,6 +374,9 @@ export default function ReviewResults() {
               <span className="bg-[#080d1a] border border-[#232f48] text-slate-300 text-xs font-mono font-bold px-3 py-1 rounded-lg flex items-center gap-1.5">
                 <span>⏱</span> Total Time: <strong className="text-white">{formatSeconds(totalAttemptTimeSec)}</strong>
               </span>
+              <span className="bg-amber-950/60 border border-amber-800/60 text-amber-300 text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
+                <span>🏆</span> Score: <strong className="text-white">{totalScore} / {totalPossibleScore} pts</strong>
+              </span>
               <span className="bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1.5">
                 <span className="text-emerald-400">●</span> Correct: {correctCount}
               </span>
@@ -361,17 +394,33 @@ export default function ReviewResults() {
             </div>
           </div>
 
-          {/* Right Accuracy Score Pill */}
-          <div className="bg-[#080d1a] border border-[#1e2a47] rounded-2xl p-6 text-center min-w-[200px] shadow-inner">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              OVERALL ACCURACY
-            </span>
-            <div className="text-4xl font-extrabold text-sky-400 my-1">
-              {correctCount} <span className="text-slate-600 text-2xl font-normal">/ {totalQuestions}</span>
+          {/* Right Score & Accuracy Panel */}
+          <div className="flex flex-col sm:flex-row items-stretch gap-3">
+            {/* Total Points Score Card */}
+            <div className="bg-[#080d1a] border border-[#1e2a47] rounded-2xl p-5 text-center min-w-[190px] shadow-inner flex flex-col justify-center">
+              <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider block mb-1">
+                🏆 TOTAL SCORE
+              </span>
+              <div className="text-3xl font-black text-white my-0.5">
+                {totalScore} <span className="text-slate-500 text-lg font-normal">/ {totalPossibleScore} pts</span>
+              </div>
+              <span className="text-xs font-bold text-amber-400 block mt-1">
+                {scorePercentage}% Score Achieved
+              </span>
             </div>
-            <span className="text-xs font-bold text-emerald-400 block mt-1">
-              {accuracyRate}% Accuracy Rate
-            </span>
+
+            {/* Questions AC Card */}
+            <div className="bg-[#080d1a] border border-[#1e2a47] rounded-2xl p-5 text-center min-w-[170px] shadow-inner flex flex-col justify-center">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                SOLVED AC
+              </span>
+              <div className="text-3xl font-black text-sky-400 my-0.5">
+                {correctCount} <span className="text-slate-600 text-lg font-normal">/ {totalQuestions}</span>
+              </div>
+              <span className="text-xs font-bold text-emerald-400 block mt-1">
+                {accuracyRate}% Accuracy
+              </span>
+            </div>
           </div>
         </div>
 
@@ -518,6 +567,9 @@ export default function ReviewResults() {
                         {item.section}
                       </span>
                       <DifficultyChip difficulty={p.difficulty} />
+                      <span className="text-xs font-mono font-bold bg-[#080d1a] border border-[#213154] text-amber-300 px-3 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
+                        <span>🏆</span> Score: <strong className="text-white">{item.maxScore}</strong> / {item.maxPossiblePoints} pts
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -603,6 +655,64 @@ export default function ReviewResults() {
                     </div>
                   )}
 
+                  {/* Test Cases Points Matrix */}
+                  {totalTC > 0 && (
+                    <div className="bg-[#080d1a] border border-[#1e2a47] rounded-xl p-3.5 space-y-2">
+                      <div className="flex items-center justify-between text-xs flex-wrap gap-2">
+                        <span className="font-bold text-slate-300">
+                          🧪 Test Case Scoring Breakdown ({p.difficulty || 'Easy'} · Total {item.maxPossiblePoints} pts)
+                        </span>
+                        <span className="font-mono text-amber-300 font-bold">
+                          Best Question Score: {item.maxScore} / {item.maxPossiblePoints} pts
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
+                        {Array.from({ length: totalTC }).map((_, tcIdx) => {
+                          const diffRules = getDifficultyPoints(p.difficulty);
+                          const tcPts = diffRules.tcPoints?.[tcIdx] || Math.round(item.maxPossiblePoints / totalTC);
+                          const isPassedInBest = (item.bestSub?.passedTests || 0) > tcIdx;
+                          const isVisible = tcIdx === 0;
+
+                          return (
+                            <div
+                              key={tcIdx}
+                              className={`p-2 rounded-lg border text-center text-xs font-mono transition ${
+                                isPassedInBest
+                                  ? 'bg-emerald-950/40 border-emerald-700/70 text-emerald-300'
+                                  : 'bg-rose-950/30 border-rose-900/50 text-rose-300'
+                              }`}
+                            >
+                              <span className="block text-[10px] text-slate-400">
+                                TC {tcIdx + 1} {isVisible ? '(Visible)' : '(Hidden)'}
+                              </span>
+                              <span className="font-bold block my-0.5">{isPassedInBest ? `+${tcPts} pts` : `0/${tcPts}`}</span>
+                              <span className="text-[10px]">{isPassedInBest ? 'PASSED' : 'FAILED'}</span>
+                            </div>
+                          );
+                        })}
+
+                        {/* All 6 Solved Bonus Box */}
+                        {(() => {
+                          const diffRules = getDifficultyPoints(p.difficulty);
+                          const hasBonus = (item.bestSub?.passedTests || 0) >= totalTC && totalTC > 0;
+                          return (
+                            <div
+                              className={`p-2 rounded-lg border text-center text-xs font-mono transition ${
+                                hasBonus
+                                  ? 'bg-amber-950/60 border-amber-500/70 text-amber-300'
+                                  : 'bg-[#131b2e] border-[#243354] text-slate-500'
+                              }`}
+                            >
+                              <span className="block text-[10px] uppercase font-bold text-amber-400">All Solved</span>
+                              <span className="font-bold block my-0.5">{hasBonus ? `+${diffRules.bonus} pts` : `0/${diffRules.bonus}`}</span>
+                              <span className="text-[10px]">{hasBonus ? 'BONUS 🎉' : 'LOCKED'}</span>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="pt-2 border-t border-[#1e2a47]/60">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -617,13 +727,18 @@ export default function ReviewResults() {
                     </div>
 
                     {subs.length === 0 ? (
-                      <div className="p-4 bg-[#080d1a] border border-[#1e2a47] rounded-xl text-xs text-slate-500 text-center font-mono">
-                        No submissions were recorded for this problem.
+                      <div className="p-4 bg-[#080d1a] border border-[#1e2a47] rounded-xl text-center text-xs text-slate-500">
+                        No submissions recorded for this question.
                       </div>
                     ) : (
-                      <div className="space-y-2.5">
+                      <div className="space-y-2">
                         {subs.map((sub, sIdx) => {
                           const isCodeExpanded = expandedCodeSubId === sub._id;
+                          const subScore = sub.score !== undefined && sub.score !== null
+                            ? sub.score
+                            : calculateProblemScore(p.difficulty, sub.passedTests, sub.totalTests);
+                          const isBest = subScore === item.maxScore && subScore > 0;
+
                           return (
                             <div
                               key={sub._id || sIdx}
@@ -636,6 +751,13 @@ export default function ReviewResults() {
                                   <span className="text-slate-200 font-bold uppercase">{sub.language}</span>
                                   <span className="text-slate-500">·</span>
                                   <span className="text-slate-400">{sub.passedTests}/{sub.totalTests} tests passed</span>
+                                  <span className="text-slate-500">·</span>
+                                  <span className="text-amber-300 font-bold">{subScore} pts</span>
+                                  {isBest && (
+                                    <span className="text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-md">
+                                      ★ Best Score (Counted)
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-4">

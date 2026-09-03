@@ -388,9 +388,13 @@ export default function Dashboard() {
                             {setInfo?.category || 'General'}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-400 font-mono">
-                          {new Date(a.startedAt).toLocaleDateString()} at {new Date(a.startedAt).toLocaleTimeString()}
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap text-xs text-slate-400 font-mono">
+                          <span className="font-bold text-amber-300 bg-amber-950/60 border border-amber-800/60 px-2 py-0.5 rounded">
+                            🏆 Score: {a.score || 0} pts
+                          </span>
+                          <span>•</span>
+                          <span>{new Date(a.startedAt).toLocaleDateString()} at {new Date(a.startedAt).toLocaleTimeString()}</span>
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-3 flex-shrink-0">

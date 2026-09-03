@@ -9,6 +9,7 @@ import { endAttempt, getAttempt, saveTimers } from '../api/attempts';
 import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
 import ModalConfirm from '../components/ModalConfirm';
+import { calculateProblemScore, getDifficultyPoints } from '../utils/scoring';
 
 const STARTERS = {
   java: (title) => `import java.util.*;\nimport java.io.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // Write your solution here\n    }\n}\n`,
@@ -696,8 +697,11 @@ export default function CodingArena() {
               {activeTab === 'problem' && (
                 <div className="space-y-6">
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <DifficultyChip difficulty={problem.difficulty} />
+                      <span className="text-xs font-mono font-bold text-amber-300 bg-amber-950/40 border border-amber-800/60 px-2.5 py-0.5 rounded-full">
+                        ⭐ Max {getDifficultyPoints(problem.difficulty).totalPoints} pts
+                      </span>
                       <span className="text-xs text-slate-400 bg-[#18223a] border border-[#243352] px-2.5 py-0.5 rounded-full font-mono">
                         {problem.category}
                       </span>
@@ -857,6 +861,40 @@ export default function CodingArena() {
                           {submission.memory && <span>💾 Memory: <strong className="text-slate-200">{(submission.memory / 1024).toFixed(1)} MB</strong></span>}
                           <span>🌐 Lang: <strong className="text-slate-200 uppercase">{submission.language}</strong></span>
                         </div>
+
+                        {/* Points & Score Banner */}
+                        {(() => {
+                          const diffRules = getDifficultyPoints(problem.difficulty);
+                          const runScore = submission.score !== undefined && submission.score !== null
+                            ? submission.score
+                            : calculateProblemScore(problem.difficulty, submission.passedTests, submission.totalTests);
+                          const maxProbScore = Math.max(
+                            runScore,
+                            ...(submissions || []).map(s => s.score !== undefined ? s.score : calculateProblemScore(problem.difficulty, s.passedTests, s.totalTests))
+                          );
+
+                          return (
+                            <div className="bg-[#080d1a] border border-[#203152] rounded-xl p-3 flex items-center justify-between flex-wrap gap-2 text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="text-amber-400 font-bold">🏆 Score for this Run:</span>
+                                <span className="text-white font-mono font-extrabold text-sm">
+                                  {runScore} / {diffRules.totalPoints} pts
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-400">Best Score on Question (Max):</span>
+                                <span className="text-emerald-400 font-mono font-bold text-xs">
+                                  {maxProbScore} / {diffRules.totalPoints} pts
+                                </span>
+                              </div>
+                              {submission.passedTests >= (submission.totalTests || 6) && diffRules.bonus > 0 && (
+                                <div className="w-full text-center text-xs font-bold text-amber-300 bg-amber-950/60 border border-amber-600/60 py-1.5 px-3 rounded-lg mt-1">
+                                  🎉 All 6 Solved Bonus (+{diffRules.bonus} pts) Awarded!
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Compilation Error Output */}
@@ -882,6 +920,7 @@ export default function CodingArena() {
                             {submission.testResults.map((tr, i) => {
                               const originalTc = problem.testCases?.[i];
                               const isHidden = tr.isHidden || originalTc?.isHidden;
+                              const tcPts = getDifficultyPoints(problem.difficulty).tcPoints?.[i] || Math.round(getDifficultyPoints(problem.difficulty).totalPoints / (submission.totalTests || 6));
 
                               // VISIBLE TEST CASE: Shows Input, Expected Output, and User's Output!
                               if (!isHidden) {
@@ -902,6 +941,9 @@ export default function CodingArena() {
                                           tr.passed ? 'bg-emerald-900/40 border-emerald-700 text-emerald-300' : 'bg-rose-900/40 border-rose-700 text-rose-300'
                                         }`}>
                                           {tr.passed ? 'PASSED' : 'WRONG ANSWER'}
+                                        </span>
+                                        <span className="text-[10px] font-mono font-bold text-amber-300">
+                                          ({tr.passed ? `+${tcPts}` : '0'}/{tcPts} pts)
                                         </span>
                                       </span>
                                       {tr.time && <span className="font-mono text-slate-400">{tr.time}ms</span>}
@@ -957,6 +999,9 @@ export default function CodingArena() {
                                         : 'bg-rose-900/40 border-rose-700 text-rose-300'
                                     }`}>
                                       {tr.passed ? 'WORKING / PASSED' : 'FAILED'}
+                                    </span>
+                                    <span className="text-[10px] font-mono font-bold text-amber-300">
+                                      ({tr.passed ? `+${tcPts}` : '0'}/{tcPts} pts)
                                     </span>
                                   </div>
 

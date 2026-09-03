@@ -23,6 +23,7 @@ const submissionSchema = new Schema({
   totalTests: { type: Number, default: 0 },
   runtime: Number,   // ms
   memory: Number,    // KB
+  score: { type: Number, default: 0 },
   compileError: String,
   testResults: [testResultSchema],
   submittedAt: { type: Date, default: Date.now },

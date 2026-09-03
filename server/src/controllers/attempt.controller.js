@@ -3,35 +3,57 @@ import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { Attempt } from '../models/attempt.model.js';
 import { QuestionSet } from '../models/questionset.model.js';
+import { calculateAttemptScoreBreakdown, getDifficultyPoints } from '../utils/scoring.js';
 
 export const startAttempt = asyncHandler(async (req, res) => {
   const { questionSetId } = req.body;
   if (!questionSetId) throw new ApiError(400, 'questionSetId required');
 
-  const set = await QuestionSet.findById(questionSetId);
+  const set = await QuestionSet.findById(questionSetId).populate('problems', 'difficulty');
   if (!set) throw new ApiError(404, 'Question set not found');
 
   // Check if user has an in_progress attempt for this set
   const existing = await Attempt.findOne({ userId: req.user._id, questionSetId, status: 'in_progress' });
   if (existing) return res.json(new ApiResponse(200, 'Resuming existing attempt', { attempt: existing }));
 
+  const maxPossibleScore = (set.problems || []).reduce(
+    (acc, p) => acc + getDifficultyPoints(p.difficulty).totalPoints,
+    0
+  );
+
   const attempt = await Attempt.create({
     userId: req.user._id,
     questionSetId,
     timingMode: set.timingMode,
     totalTimeLimit: set.totalTimeLimit,
+    maxPossibleScore,
   });
 
   return res.status(201).json(new ApiResponse(201, 'Attempt started', { attempt }));
 });
 
 export const endAttempt = asyncHandler(async (req, res) => {
-  const attempt = await Attempt.findById(req.params.id);
+  const attempt = await Attempt.findById(req.params.id)
+    .populate({
+      path: 'questionSetId',
+      populate: { path: 'problems', select: 'difficulty' },
+    })
+    .populate('submissions', 'problemId score passedTests totalTests');
+
   if (!attempt) throw new ApiError(404, 'Attempt not found');
   if (attempt.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
     throw new ApiError(403, 'Forbidden');
   }
   if (attempt.status !== 'in_progress') throw new ApiError(400, 'Attempt already ended');
+
+  if (attempt.questionSetId?.problems && attempt.submissions) {
+    const { totalScore, maxPossibleScore } = calculateAttemptScoreBreakdown(
+      attempt.questionSetId.problems,
+      attempt.submissions
+    );
+    attempt.score = totalScore;
+    attempt.maxPossibleScore = maxPossibleScore;
+  }
 
   attempt.status = req.body.timedOut ? 'timed_out' : 'completed';
   attempt.endedAt = new Date();
@@ -58,12 +80,12 @@ export const getAttemptReview = asyncHandler(async (req, res) => {
       select: 'name category problems timingMode totalTimeLimit description',
       populate: {
         path: 'problems',
-        select: 'title difficulty category timeLimit constraints description examples',
+        select: 'title difficulty category timeLimit constraints description examples testCases',
       },
     })
     .populate({
       path: 'submissions',
-      select: 'problemId language code status verdict passedTests totalTests runtime memory compileError testResults submittedAt',
+      select: 'problemId score language code status verdict passedTests totalTests runtime memory compileError testResults submittedAt',
     });
 
   if (!attempt) throw new ApiError(404, 'Attempt not found');
@@ -71,14 +93,31 @@ export const getAttemptReview = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Forbidden');
   }
 
-  return res.json(new ApiResponse(200, 'Attempt review fetched', { attempt }));
+  let scoreBreakdown = { totalScore: attempt.score || 0, maxPossibleScore: attempt.maxPossibleScore || 0, problemScores: {} };
+  if (attempt.questionSetId?.problems && attempt.submissions) {
+    scoreBreakdown = calculateAttemptScoreBreakdown(
+      attempt.questionSetId.problems,
+      attempt.submissions
+    );
+    if (attempt.score !== scoreBreakdown.totalScore || attempt.maxPossibleScore !== scoreBreakdown.maxPossibleScore) {
+      attempt.score = scoreBreakdown.totalScore;
+      attempt.maxPossibleScore = scoreBreakdown.maxPossibleScore;
+      await attempt.save();
+    }
+  }
+
+  return res.json(new ApiResponse(200, 'Attempt review fetched', { attempt, scoreBreakdown }));
 });
 
 export const myAttempts = asyncHandler(async (req, res) => {
   const { page = 1, limit = 20 } = req.query;
   const attempts = await Attempt.find({ userId: req.user._id })
-    .populate('questionSetId', 'name category problems timingMode totalTimeLimit')
-    .populate('submissions', 'problemId verdict passedTests totalTests submittedAt')
+    .populate({
+      path: 'questionSetId',
+      select: 'name category problems timingMode totalTimeLimit',
+      populate: { path: 'problems', select: 'title difficulty' },
+    })
+    .populate('submissions', 'problemId score verdict passedTests totalTests submittedAt')
     .sort({ startedAt: -1 })
     .skip((page - 1) * limit)
     .limit(Number(limit));
@@ -172,9 +211,24 @@ export const resetAttempt = asyncHandler(async (req, res) => {
 
 // Admin: Stop an ongoing user test immediately
 export const stopAttempt = asyncHandler(async (req, res) => {
-  const attempt = await Attempt.findById(req.params.id);
+  const attempt = await Attempt.findById(req.params.id)
+    .populate({
+      path: 'questionSetId',
+      populate: { path: 'problems', select: 'difficulty' },
+    })
+    .populate('submissions', 'problemId score passedTests totalTests');
+
   if (!attempt) throw new ApiError(404, 'Attempt not found');
   if (attempt.status !== 'in_progress') throw new ApiError(400, 'Attempt is not currently in progress');
+
+  if (attempt.questionSetId?.problems && attempt.submissions) {
+    const { totalScore, maxPossibleScore } = calculateAttemptScoreBreakdown(
+      attempt.questionSetId.problems,
+      attempt.submissions
+    );
+    attempt.score = totalScore;
+    attempt.maxPossibleScore = maxPossibleScore;
+  }
 
   attempt.status = 'stopped_by_admin';
   attempt.stoppedByAdmin = true;

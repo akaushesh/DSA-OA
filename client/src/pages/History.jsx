@@ -8,6 +8,7 @@ import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
 
 import ModalConfirm from '../components/ModalConfirm';
+import { getDifficultyPoints, calculateAttemptScoreBreakdown } from '../utils/scoring';
 
 export default function History() {
   const [attempts, setAttempts] = useState([]);
@@ -127,9 +128,15 @@ export default function History() {
                           {setInfo?.category || 'General'}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 font-mono">
-                        Started: {new Date(a.startedAt).toLocaleDateString()} at {new Date(a.startedAt).toLocaleTimeString()} · {subCount} submission{subCount === 1 ? '' : 's'} made
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap text-xs text-slate-400 font-mono mt-1">
+                        <span className="font-bold text-amber-300 bg-amber-950/60 border border-amber-800/60 px-2 py-0.5 rounded">
+                          🏆 Score: {a.score || 0} pts
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Started: {new Date(a.startedAt).toLocaleDateString()} at {new Date(a.startedAt).toLocaleTimeString()} · {subCount} submission{subCount === 1 ? '' : 's'} made
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-3 text-xs font-semibold">
