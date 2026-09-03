@@ -19,6 +19,8 @@ const isOriginAllowed = (origin) => {
   if (configuredOrigins.includes(cleanOrigin)) return true;
   if (cleanOrigin.startsWith('http://localhost:')) return true;
   if (/^https:\/\/.*\.vercel\.app$/.test(cleanOrigin)) return true;
+  if (/^https:\/\/.*\.devtunnels\.ms$/.test(cleanOrigin)) return true;
+  if (/^https:\/\/.*\.github\.dev$/.test(cleanOrigin)) return true;
   return false;
 };
 
