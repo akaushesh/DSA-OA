@@ -22,7 +22,7 @@ export default function Login() {
       dispatch(login({ user, accessToken: authService.getAccessToken() }));
       dispatch(setRole(user.role || 'user'));
       toast.success(`Welcome back, ${user.fullName || user.username}!`);
-      navigate(user.role === 'admin' ? '/admin' : '/dashboard');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
       toast.error(err.message || 'Login failed');

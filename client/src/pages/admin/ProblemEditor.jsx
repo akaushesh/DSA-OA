@@ -11,6 +11,7 @@ const emptyForm = {
   constraints: '',
   timeLimit: 1800,
   memoryLimit: 256,
+  starterCode: { cpp: '', java: '' },
   examples: [{ input: '', output: '', explanation: '' }],
   testCases: [{ input: '', expectedOutput: '', isHidden: false }],
 };
@@ -36,6 +37,10 @@ export default function ProblemEditor() {
           constraints: p.constraints || '',
           timeLimit: p.timeLimit || 1800,
           memoryLimit: p.memoryLimit || 256,
+          starterCode: {
+            cpp: p.starterCode?.cpp || '',
+            java: p.starterCode?.java || '',
+          },
           examples: p.examples?.length ? p.examples : emptyForm.examples,
           testCases: p.testCases?.length ? p.testCases : emptyForm.testCases,
         });
@@ -116,6 +121,29 @@ export default function ProblemEditor() {
           <div>
             <label className={lbl}>Constraints</label>
             <textarea className={inp + ' h-16 resize-y'} value={form.constraints} onChange={e => set('constraints', e.target.value)} />
+          </div>
+
+          {/* Optional Starter / Boilerplate Code */}
+          <div className="bg-[#1a1a2e] border border-[#2d2d44] rounded-lg p-4 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-200">Optional Starter / Boilerplate Code</h3>
+            <div>
+              <label className={lbl}>C++ Starter Code (Optional)</label>
+              <textarea
+                className={inp + ' h-24 font-mono text-xs resize-y'}
+                placeholder={`#include <bits/stdc++.h>\nusing namespace std;\n...`}
+                value={form.starterCode.cpp}
+                onChange={e => set('starterCode', { ...form.starterCode, cpp: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className={lbl}>Java Starter Code (Optional)</label>
+              <textarea
+                className={inp + ' h-24 font-mono text-xs resize-y'}
+                placeholder={`import java.util.*;\npublic class Solution {\n...`}
+                value={form.starterCode.java}
+                onChange={e => set('starterCode', { ...form.starterCode, java: e.target.value })}
+              />
+            </div>
           </div>
 
           {/* Examples */}

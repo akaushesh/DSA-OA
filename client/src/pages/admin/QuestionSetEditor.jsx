@@ -11,6 +11,10 @@ const SAMPLE_DSA_JSON = [
     "category": "Graphs",
     "description": "Given an m x n 2D binary grid grid which represents a map of '1's (land) and '0's (water), return the number of islands.\n\nAn island is surrounded by water and is formed by connecting adjacent lands horizontally or vertically. You may assume all four edges of the grid are all surrounded by water.",
     "constraints": "1 <= m, n <= 300\ngrid[i][j] is '0' or '1'",
+    "starterCode": {
+      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // Boilerplate for Number of Islands\n    return 0;\n}",
+      "java": "import java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        // Boilerplate for Number of Islands\n    }\n}"
+    },
     "examples": [
       {
         "input": "grid = [[\"1\",\"1\",\"0\",\"0\",\"0\"],[\"1\",\"1\",\"0\",\"0\",\"0\"],[\"0\",\"0\",\"1\",\"0\",\"0\"],[\"0\",\"0\",\"0\",\"1\",\"1\"]]",
@@ -230,6 +234,7 @@ export default function QuestionSetEditor() {
           difficulty: p.difficulty || 'Medium',
           category: p.category || p.section || category || 'General',
           constraints: p.constraints || '',
+          starterCode: p.starterCode || undefined,
           timeLimit: p.timeLimit || timerMinutes * 60,
           memoryLimit: p.memoryLimit || 256,
           examples: p.examples || [],
@@ -492,7 +497,7 @@ export default function QuestionSetEditor() {
                 onChange={e => setJsonInput(e.target.value)}
                 rows={13}
                 className="w-full bg-[#080d1a] border border-[#202c47] text-emerald-400 font-mono text-xs rounded-xl p-4 leading-relaxed focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 resize-y"
-                placeholder="[ { title: '...', description: '...', timeLimit: 900, testCases: [...] } ]"
+                placeholder='[ { "title": "...", "description": "...", "starterCode": { "cpp": "...", "java": "..." }, "testCases": [...] } ]'
                 spellCheck={false}
               />
             </div>
@@ -602,9 +607,18 @@ export default function QuestionSetEditor() {
 
                     {/* Description preview if present */}
                     {q.description && q.description !== qTitle && (
-                      <p className="text-slate-300 text-xs leading-relaxed mb-3 line-clamp-3 whitespace-pre-line bg-[#0c1426] p-2.5 rounded-lg border border-[#1b2744]">
+                      <div className="text-slate-300 text-xs leading-relaxed mb-3 whitespace-pre-wrap max-h-40 overflow-y-auto bg-[#0c1426] p-3 rounded-lg border border-[#1b2744] scrollbar-thin scrollbar-thumb-slate-700">
                         {q.description}
-                      </p>
+                      </div>
+                    )}
+
+                    {/* Starter Code Indicator if present */}
+                    {(q.starterCode?.cpp || q.starterCode?.java) && (
+                      <div className="mb-3 flex items-center gap-2 text-[11px] font-mono text-purple-300 bg-purple-950/40 border border-purple-800/50 px-2.5 py-1 rounded-lg">
+                        <span>⚡ Starter Code:</span>
+                        {q.starterCode.cpp && <span className="bg-purple-900/60 px-1.5 py-0.5 rounded text-[10px]">C++</span>}
+                        {q.starterCode.java && <span className="bg-purple-900/60 px-1.5 py-0.5 rounded text-[10px]">Java</span>}
+                      </div>
                     )}
 
                     {/* MCQs Option Grid if this is an Aptitude/MCQ item */}

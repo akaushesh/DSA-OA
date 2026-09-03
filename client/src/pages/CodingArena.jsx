@@ -133,7 +133,8 @@ export default function CodingArena() {
       if (draft) {
         setCode(draft);
       } else {
-        setCode(STARTERS[lang](p?.title || 'Solution'));
+        const customStarter = p?.starterCode?.[lang];
+        setCode(customStarter || STARTERS[lang](p?.title || 'Solution'));
       }
 
       if (p?.category) setActiveSection(p.category);
@@ -182,7 +183,8 @@ export default function CodingArena() {
 
   const changeLang = (newLang) => {
     setLang(newLang);
-    setCode(STARTERS[newLang](problem?.title || 'Solution'));
+    const customStarter = problem?.starterCode?.[newLang];
+    setCode(customStarter || STARTERS[newLang](problem?.title || 'Solution'));
     toast(`Switched to ${newLang === 'cpp' ? 'C++' : 'Java'}`);
   };
 

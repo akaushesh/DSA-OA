@@ -20,6 +20,10 @@ const problemSchema = new Schema({
   tags: [String],
   constraints: String,
   examples: [exampleSchema],
+  starterCode: {
+    cpp: { type: String, default: '' },
+    java: { type: String, default: '' },
+  },
   timeLimit: { type: Number, default: 1800 }, // seconds per problem in per_problem mode
   memoryLimit: { type: Number, default: 256 }, // MB
   testCases: [testCaseSchema],

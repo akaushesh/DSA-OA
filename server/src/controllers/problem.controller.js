@@ -5,9 +5,9 @@ import { Problem } from '../models/problem.model.js';
 
 // Admin: create problem
 export const createProblem = asyncHandler(async (req, res) => {
-  const { title, description, difficulty, category, tags, constraints, examples, timeLimit, memoryLimit, testCases } = req.body;
+  const { title, description, difficulty, category, tags, constraints, examples, starterCode, timeLimit, memoryLimit, testCases } = req.body;
   if (!title || !description || !difficulty || !category) throw new ApiError(400, 'title, description, difficulty, category required');
-  const problem = await Problem.create({ title, description, difficulty, category, tags, constraints, examples, timeLimit, memoryLimit, testCases, createdBy: req.user._id });
+  const problem = await Problem.create({ title, description, difficulty, category, tags, constraints, examples, starterCode, timeLimit, memoryLimit, testCases, createdBy: req.user._id });
   return res.status(201).json(new ApiResponse(201, 'Problem created', { problem }));
 });
 
