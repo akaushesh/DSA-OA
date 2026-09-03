@@ -57,6 +57,50 @@ export default function CodingArena() {
 
   const [adminStoppedModal, setAdminStoppedModal] = useState(false);
 
+  // Layout Management State: Hideable Sidebar & Resizable Panes
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    const saved = localStorage.getItem('oa_sidebar_open');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [splitPercent, setSplitPercent] = useState(() => {
+    const saved = localStorage.getItem('oa_split_percent');
+    return saved ? Math.min(75, Math.max(20, parseFloat(saved))) : 45;
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const arenaContainerRef = useRef(null);
+
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e) => {
+      if (!arenaContainerRef.current) return;
+      const rect = arenaContainerRef.current.getBoundingClientRect();
+      const newPercent = ((e.clientX - rect.left) / rect.width) * 100;
+      const clamped = Math.min(75, Math.max(20, newPercent));
+      setSplitPercent(clamped);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      setSplitPercent(cur => {
+        localStorage.setItem('oa_split_percent', cur.toString());
+        return cur;
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
   // Load Attempt and Question Set metadata
   useEffect(() => {
     getAttempt(attemptId)
@@ -538,8 +582,27 @@ export default function CodingArena() {
       {/* TOP HEADER BAR MATCHING SCREENSHOT 3 */}
       <div className="bg-[#11192e] border-b border-[#1f2c4b] px-6 py-2.5 flex items-center justify-between flex-shrink-0 z-20">
         
-        {/* Left: Test Name & Section Breadcrumb */}
+        {/* Left: Sidebar Toggle, Test Name & Section Breadcrumb */}
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setSidebarOpen(prev => {
+                const next = !prev;
+                localStorage.setItem('oa_sidebar_open', String(next));
+                return next;
+              });
+            }}
+            title={sidebarOpen ? "Hide sidebar (give more space to code)" : "Show question list"}
+            className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition ${
+              sidebarOpen
+                ? 'bg-[#18223a] border-[#243352] text-slate-300 hover:text-white hover:border-slate-500'
+                : 'bg-purple-950/80 border-purple-600 text-purple-200 shadow-md shadow-purple-950/50 hover:bg-purple-900'
+            }`}
+          >
+            <span>{sidebarOpen ? '◧' : '◨'}</span>
+            <span className="hidden sm:inline">{sidebarOpen ? 'Hide Sidebar' : 'Show Questions'}</span>
+          </button>
           <div>
             <h1 className="text-white text-sm font-extrabold tracking-tight">
               {questionSet?.name || 'Assessment Test'}
@@ -616,10 +679,10 @@ export default function CodingArena() {
       </div>
 
       {/* MAIN BODY: SIDEBAR (LEFT) + ARENA (RIGHT) */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         
         {/* LEFT SIDEBAR: SECTION LIST & QUESTION MAP */}
-        <div className="w-64 bg-[#0d1527] border-r border-[#1f2c4b] flex flex-col justify-between overflow-hidden flex-shrink-0">
+        <div className={`${sidebarOpen ? 'w-64' : 'w-0 hidden'} transition-all duration-200 bg-[#0d1527] border-r border-[#1f2c4b] flex flex-col justify-between overflow-hidden flex-shrink-0 z-20`}>
           
           <div className="p-4 overflow-y-auto space-y-6">
             
@@ -726,22 +789,44 @@ export default function CodingArena() {
 
         </div>
 
+        {/* Floating Sidebar Re-open Pill when hidden */}
+        {!sidebarOpen && (
+          <button
+            type="button"
+            onClick={() => {
+              setSidebarOpen(true);
+              localStorage.setItem('oa_sidebar_open', 'true');
+            }}
+            className="absolute left-3 bottom-3 z-30 bg-[#141e36]/90 hover:bg-[#1d2b4d] border border-purple-700/60 hover:border-purple-500 text-purple-200 hover:text-white px-3 py-2 rounded-xl shadow-2xl backdrop-blur transition flex items-center gap-1.5 text-xs font-bold group"
+            title="Open Question Map & Sections"
+          >
+            <span className="group-hover:translate-x-0.5 transition-transform">▶</span>
+            <span>Questions ({currentQNum}/{allProblems.length})</span>
+          </button>
+        )}
+
         {/* RIGHT MAIN PANEL: PROBLEM DETAILS & CODING INTERFACE */}
-        <div className="flex-1 flex overflow-hidden bg-[#080d1a]">
+        <div
+          ref={arenaContainerRef}
+          className={`flex-1 flex overflow-hidden bg-[#080d1a] relative ${isDragging ? 'cursor-col-resize select-none' : ''}`}
+        >
           
           {/* PROBLEM / RESULTS / SUBMISSIONS LEFT HALF */}
-          <div className={`${hasMcqOptions ? 'w-full' : 'w-[45%]'} border-r border-[#1f2c4b] flex flex-col overflow-hidden bg-[#0d1527]`}>
+          <div
+            style={{ width: hasMcqOptions ? '100%' : `${splitPercent}%` }}
+            className="border-r border-[#1f2c4b] flex flex-col overflow-hidden bg-[#0d1527] flex-shrink-0"
+          >
             
             {/* Sub-Header Tabs */}
-            <div className="flex items-center justify-between border-b border-[#1f2c4b] bg-[#11192e] px-4 py-2 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="bg-purple-950/80 border border-purple-700 text-purple-300 font-extrabold text-xs px-2.5 py-1 rounded-lg">
+            <div className="flex items-center justify-between border-b border-[#1f2c4b] bg-[#11192e] px-4 py-2 flex-shrink-0 gap-2">
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+                <span className="bg-purple-950/80 border border-purple-700 text-purple-300 font-extrabold text-xs px-2.5 py-1 rounded-lg flex-shrink-0">
                   Q{currentQNum} / {allProblems.length}
                 </span>
 
                 <button
                   onClick={() => { setActiveTab('problem'); setSelectedSubView(null); }}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition ${
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition flex-shrink-0 ${
                     activeTab === 'problem' ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -752,7 +837,7 @@ export default function CodingArena() {
                   <>
                     <button
                       onClick={() => { setActiveTab('results'); setSelectedSubView(null); }}
-                      className={`px-3 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1.5 ${
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1.5 flex-shrink-0 ${
                         activeTab === 'results' ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -762,7 +847,7 @@ export default function CodingArena() {
 
                     <button
                       onClick={() => { setActiveTab('submissions'); setSelectedSubView(null); }}
-                      className={`px-3 py-1 text-xs font-bold rounded-lg transition ${
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1.5 flex-shrink-0 ${
                         activeTab === 'submissions' ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -772,18 +857,48 @@ export default function CodingArena() {
                 )}
               </div>
 
-              {/* Mark for Review Button */}
-              <button
-                type="button"
-                onClick={toggleMarkForReview}
-                className={`text-xs font-bold px-3 py-1 rounded-lg border transition flex items-center gap-1.5 ${
-                  isMarked
-                    ? 'bg-amber-500 text-slate-900 border-amber-400 font-extrabold shadow'
-                    : 'bg-[#18223a] text-slate-300 border-[#2a3656] hover:text-white'
-                }`}
-              >
-                <span>🔖</span> {isMarked ? 'Marked' : 'Mark for Review'}
-              </button>
+              {/* Controls: Quick Split Presets + Mark for Review */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {!hasMcqOptions && (
+                  <div className="hidden sm:flex items-center gap-1 bg-[#090e1c] border border-[#1e2a47] rounded-lg p-0.5">
+                    <span className="text-[9px] text-slate-500 font-bold uppercase px-1">Split</span>
+                    {[
+                      { label: '35%', val: 35 },
+                      { label: '50%', val: 50 },
+                      { label: '65%', val: 65 },
+                    ].map(preset => (
+                      <button
+                        key={preset.val}
+                        type="button"
+                        onClick={() => {
+                          setSplitPercent(preset.val);
+                          localStorage.setItem('oa_split_percent', preset.val.toString());
+                        }}
+                        className={`px-1.5 py-0.5 text-[10px] font-mono rounded transition ${
+                          Math.round(splitPercent) === preset.val
+                            ? 'bg-sky-600 text-white font-bold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        title={`Set Question pane to ${preset.val}%`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={toggleMarkForReview}
+                  className={`text-xs font-bold px-3 py-1 rounded-lg border transition flex items-center gap-1.5 ${
+                    isMarked
+                      ? 'bg-amber-500 text-slate-900 border-amber-400 font-extrabold shadow'
+                      : 'bg-[#18223a] text-slate-300 border-[#2a3656] hover:text-white'
+                  }`}
+                >
+                  <span>🔖</span> <span className="hidden md:inline">{isMarked ? 'Marked' : 'Mark for Review'}</span>
+                </button>
+              </div>
             </div>
 
             {/* TAB CONTENT */}
@@ -1246,9 +1361,22 @@ export default function CodingArena() {
 
           </div>
 
+          {/* RESIZABLE DIVIDER HANDLE */}
+          {!hasMcqOptions && (
+            <div
+              onMouseDown={handleMouseDown}
+              className={`w-2 hover:w-2.5 bg-[#141d33] hover:bg-sky-500 cursor-col-resize transition-all flex items-center justify-center group flex-shrink-0 select-none z-10 ${
+                isDragging ? 'bg-sky-500 w-2.5' : ''
+              }`}
+              title="Drag horizontally to resize Question and Code panes"
+            >
+              <div className="w-0.5 h-8 bg-slate-600 group-hover:bg-white rounded-full transition-colors pointer-events-none" />
+            </div>
+          )}
+
           {/* MONACO CODE EDITOR (RIGHT HALF) - only for coding problems */}
           {!hasMcqOptions && (
-            <div className="flex-1 flex flex-col overflow-hidden bg-[#080d1a]">
+            <div className={`flex-1 flex flex-col overflow-hidden bg-[#080d1a] ${isDragging ? 'pointer-events-none select-none' : ''}`}>
               
               {/* Editor Header Bar */}
               <div className="bg-[#11192e] border-b border-[#1f2c4b] px-4 py-2 flex items-center justify-between flex-shrink-0">
