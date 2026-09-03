@@ -8,6 +8,7 @@ import {
   getAttemptReview,
   myAttempts,
   allAttempts,
+  saveTimers,
 } from '../controllers/attempt.controller.js';
 
 const router = Router();
@@ -18,6 +19,7 @@ router.put('/:id/end', endAttempt);
 router.delete('/:id', deleteAttempt);
 router.get('/my', myAttempts);
 router.get('/all', verifyAdmin, allAttempts);
+router.patch('/:id/timers', saveTimers);
 router.get('/:id', getAttemptReview);
 
 export default router;

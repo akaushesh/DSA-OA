@@ -99,3 +99,14 @@ export const allAttempts = asyncHandler(async (req, res) => {
   const total = await Attempt.countDocuments(filter);
   return res.json(new ApiResponse(200, 'Attempts fetched', { attempts, total }));
 });
+
+export const saveTimers = asyncHandler(async (req, res) => {
+  const { problemTimerElapsedSec } = req.body;
+  const attempt = await Attempt.findOneAndUpdate(
+    { _id: req.params.id, userId: req.user._id, status: 'in_progress' },
+    { problemTimerElapsedSec },
+    { new: true }
+  );
+  if (!attempt) throw new ApiError(404, 'Attempt not found');
+  res.json(new ApiResponse(200, 'Timers saved', {}));
+});

@@ -10,6 +10,7 @@ const attemptSchema = new Schema({
   submissions: [{ type: Schema.Types.ObjectId, ref: 'Submission' }],
   score: { type: Number, default: 0 },
   status: { type: String, enum: ['in_progress', 'completed', 'timed_out'], default: 'in_progress' },
+  problemTimerElapsedSec: { type: Map, of: Number, default: {} },
 }, { timestamps: true });
 
 export const Attempt = mongoose.model('Attempt', attemptSchema, 'attempts');

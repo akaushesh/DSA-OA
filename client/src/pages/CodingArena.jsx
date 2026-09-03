@@ -5,8 +5,7 @@ import toast from 'react-hot-toast';
 import { getProblem } from '../api/problems';
 import { getQuestionSet } from '../api/questionsets';
 import { submitCode, getSubmission, mySubmissions } from '../api/submissions';
-import { endAttempt, getAttempt } from '../api/attempts';
-import Timer from '../components/Timer';
+import { endAttempt, getAttempt, saveTimers } from '../api/attempts';
 import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
 import ModalConfirm from '../components/ModalConfirm';
@@ -42,6 +41,19 @@ export default function CodingArena() {
   const [selectedMcqAnswers, setSelectedMcqAnswers] = useState({}); // { [problemId]: string }
   const [activeSection, setActiveSection] = useState('All');
 
+  // Per-problem timers — { [problemId]: secondsLeft }
+  // Only the active problem ticks; others are frozen. Mirrors Apti-OA freeNavTimers.
+  const [problemTimers, setProblemTimers] = useState({});
+
+  const formatTime = (sec) => {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return h > 0
+      ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+      : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  };
+
   // Load Attempt and Question Set metadata
   useEffect(() => {
     getAttempt(attemptId)
@@ -52,7 +64,19 @@ export default function CodingArena() {
           getQuestionSet(att.questionSetId._id || att.questionSetId).then(setRes => {
             const qs = setRes.data.statusCode?.set;
             setQuestionSet(qs);
-            setAllProblems(qs?.problems || []);
+            const probs = qs?.problems || [];
+            setAllProblems(probs);
+
+            // Seed per-problem timers: remaining = configured - elapsed (survives reload)
+            if (att.timingMode === 'per_problem') {
+              const timers = {};
+              probs.forEach(p => {
+                const pId = p._id || p;
+                const elapsed = att.problemTimerElapsedSec?.[pId] || 0;
+                timers[pId] = Math.max(0, (p.timeLimit || 1800) - elapsed);
+              });
+              setProblemTimers(timers);
+            }
           });
         }
       })
@@ -286,11 +310,33 @@ export default function CodingArena() {
     return () => window.removeEventListener('keydown', handleShortcut, true);
   }, [handleSubmit]);
 
-  const handleTimerExpire = async () => {
-    toast.error("⏱ Time's up! Submitting assessment...");
-    try { await endAttempt(attemptId, true); } catch {}
-    navigate(`/review/${attemptId}`, { state: { timedOut: true } });
-  };
+  // Per-problem tick: only the active problem's timer counts down.
+  // Others are frozen until the user navigates to them — mirrors Apti-OA freeNavTimers.
+  useEffect(() => {
+    if (attempt?.timingMode !== 'per_problem' || !problemId) return;
+    const remaining = problemTimers[problemId] ?? 0;
+    if (remaining <= 0) return;
+    const t = setTimeout(() =>
+      setProblemTimers(prev => ({ ...prev, [problemId]: Math.max(0, (prev[problemId] ?? 0) - 1) }))
+    , 1000);
+    return () => clearTimeout(t);
+  }, [problemTimers, problemId, attempt]);
+
+  // Flush current elapsed to server before navigating (so reload reseeds correctly)
+  const flushTimers = useCallback(async () => {
+    if (attempt?.timingMode !== 'per_problem') return;
+    const elapsed = Object.fromEntries(
+      allProblems.map(p => {
+        const pId = p._id || p;
+        return [pId, (p.timeLimit || 1800) - (problemTimers[pId] ?? 0)];
+      })
+    );
+    await saveTimers(attemptId, { problemTimerElapsedSec: elapsed }).catch(() => {});
+  }, [attempt, allProblems, problemTimers, attemptId]);
+
+  const isCurrentLocked = attempt?.timingMode === 'per_problem' && (problemTimers[problemId] ?? 1) <= 0;
+  const allExpired = attempt?.timingMode === 'per_problem' && allProblems.length > 0 &&
+    allProblems.every(p => (problemTimers[p._id || p] ?? 1) <= 0);
 
   const [isEndModalOpen, setIsEndModalOpen] = useState(false);
 
@@ -298,7 +344,8 @@ export default function CodingArena() {
     setIsEndModalOpen(true);
   };
 
-  const handleNextProblem = () => {
+  const handleNextProblem = async () => {
+    await flushTimers();
     if (currentIndex < allProblems.length - 1) {
       const nextP = allProblems[currentIndex + 1];
       navigate(`/attempt/${attemptId}/problem/${nextP._id || nextP}`);
@@ -307,7 +354,8 @@ export default function CodingArena() {
     }
   };
 
-  const handlePrevProblem = () => {
+  const handlePrevProblem = async () => {
+    await flushTimers();
     if (currentIndex > 0) {
       const prevP = allProblems[currentIndex - 1];
       navigate(`/attempt/${attemptId}/problem/${prevP._id || prevP}`);
@@ -321,25 +369,14 @@ export default function CodingArena() {
     toast.success('Previous code loaded into editor');
   };
 
-  const attemptConfig = useMemo(() => {
-    try {
-      const stored = sessionStorage.getItem(`attempt_config_${attemptId}`);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  }, [attemptId]);
-
-  const activeTimerSeconds = useMemo(() => {
-    const isPerProblem = (attemptConfig?.timerMode === 'per_problem') || (attempt?.timingMode === 'per_problem') || (questionSet?.timingMode === 'per_problem');
-    if (isPerProblem) {
-      const customMins = attemptConfig?.customQuestionTimes?.[problemId];
-      if (customMins) return customMins * 60;
-      if (problem?.timeLimit) return problem.timeLimit;
-      return 900;
-    }
-    return attemptConfig?.totalTimeLimit || attempt?.totalTimeLimit || questionSet?.totalTimeLimit || 3600;
-  }, [attemptConfig, attempt, questionSet, problem, problemId]);
+  // Collective mode: compute remaining from startedAt + totalTimeLimit
+  const collectiveTimeLeft = useMemo(() => {
+    if (attempt?.timingMode === 'per_problem') return 0;
+    const limit = attempt?.totalTimeLimit || questionSet?.totalTimeLimit || 3600;
+    const started = attempt?.startedAt ? new Date(attempt.startedAt).getTime() : Date.now();
+    const elapsed = Math.floor((Date.now() - started) / 1000);
+    return Math.max(0, limit - elapsed);
+  }, [attempt, questionSet]);
 
   if (!problem) {
     return (
@@ -372,14 +409,30 @@ export default function CodingArena() {
 
         {/* Center: PROMINENT LIVE TIMER PILL */}
         <div className="flex items-center justify-center">
-          <div className="bg-[#080d1a] border border-sky-500/50 shadow-lg shadow-sky-950/50 px-5 py-1.5 rounded-full flex items-center gap-2">
-            <Timer
-              key={`${problemId}_${activeTimerSeconds}`}
-              totalSeconds={activeTimerSeconds}
-              onExpire={handleTimerExpire}
-              className="text-white text-base tracking-wider"
-            />
-          </div>
+          {attempt?.timingMode === 'per_problem' ? (() => {
+            const secs = problemTimers[problemId] ?? 0;
+            const locked = secs <= 0;
+            const isLow = secs > 0 && secs < 60;
+            return (
+              <div className={`border shadow-lg px-5 py-1.5 rounded-full flex items-center gap-2 transition-all ${
+                locked ? 'bg-rose-950/60 border-rose-500/60' :
+                isLow  ? 'bg-[#080d1a] border-red-500/70 animate-pulse' :
+                         'bg-[#080d1a] border-sky-500/50 shadow-sky-950/50'
+              }`}>
+                <span className={`font-mono font-bold text-base tracking-wider tabular-nums ${
+                  locked ? 'text-rose-400' : isLow ? 'text-red-400' : 'text-green-400'
+                }`}>
+                  ⏱ {locked ? 'Locked' : formatTime(secs)}
+                </span>
+              </div>
+            );
+          })() : (
+            <div className="bg-[#080d1a] border border-sky-500/50 shadow-lg shadow-sky-950/50 px-5 py-1.5 rounded-full flex items-center gap-2">
+              <span className="font-mono font-bold text-base tracking-wider tabular-nums text-green-400">
+                ⏱ {formatTime(collectiveTimeLeft)}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Right: Section Indicators & End Action */}
@@ -453,15 +506,18 @@ export default function CodingArena() {
                   const isActive = pId === problemId;
                   const isAns = !!answeredProblems[pId];
                   const isMrk = !!markedForReview[pId];
+                  const isLocked = attempt?.timingMode === 'per_problem' && (problemTimers[pId] ?? 1) <= 0;
 
                   return (
                     <button
                       key={pId || idx}
                       type="button"
-                      onClick={() => navigate(`/attempt/${attemptId}/problem/${pId}`)}
+                      onClick={async () => { await flushTimers(); navigate(`/attempt/${attemptId}/problem/${pId}`); }}
                       className={`w-9 h-9 rounded-xl text-xs font-bold transition flex items-center justify-center relative border ${
                         isActive
                           ? 'bg-purple-600 text-white border-purple-400 ring-2 ring-purple-400/50 shadow-md'
+                          : isLocked
+                          ? 'bg-rose-950/60 text-rose-400 border-rose-800'
                           : isAns
                           ? 'bg-emerald-950/80 text-emerald-300 border-emerald-600'
                           : isMrk
@@ -576,8 +632,31 @@ export default function CodingArena() {
             </div>
 
             {/* TAB CONTENT */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-700">
-              
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-700 relative">
+
+              {/* All problems expired — show submit overlay */}
+              {allExpired && (
+                <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                  <div className="bg-[#0d1527] border border-rose-800 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center">
+                    <h2 className="text-2xl font-extrabold text-white mb-2">Time Expired on All Problems</h2>
+                    <p className="text-slate-400 text-sm mb-6">All problem timers have run out. Submit your assessment now.</p>
+                    <button
+                      onClick={handleEndAttempt}
+                      className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm transition"
+                    >
+                      Submit Assessment
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Locked banner for current problem */}
+              {isCurrentLocked && (
+                <div className="px-4 py-2.5 bg-rose-950/40 border border-rose-800 rounded-xl text-xs font-bold text-rose-400 flex items-center gap-2">
+                  🔒 Time expired for this problem — you can still navigate to others
+                </div>
+              )}
+
               {/* TAB 1: PROBLEM STATEMENT */}
               {activeTab === 'problem' && (
                 <div className="space-y-6">
