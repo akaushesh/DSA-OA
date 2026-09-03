@@ -54,11 +54,23 @@ export default function CodingArena() {
       : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   };
 
+  const [adminStoppedModal, setAdminStoppedModal] = useState(false);
+
   // Load Attempt and Question Set metadata
   useEffect(() => {
     getAttempt(attemptId)
       .then(r => {
         const att = r.data.statusCode?.attempt;
+        if (att && att.status !== 'in_progress') {
+          toast.error(
+            att.status === 'stopped_by_admin' || att.stoppedByAdmin
+              ? '🛑 This assessment was stopped by an administrator.'
+              : 'This assessment has already ended.'
+          );
+          navigate(`/review/${attemptId}`, { replace: true });
+          return;
+        }
+
         setAttempt(att);
         if (att?.questionSetId) {
           getQuestionSet(att.questionSetId._id || att.questionSetId).then(setRes => {
@@ -97,7 +109,30 @@ export default function CodingArena() {
         setAnsweredProblems(ansMap);
       })
       .catch(console.error);
-  }, [attemptId]);
+  }, [attemptId, navigate]);
+
+  // Real-time heartbeat: if an admin stops or terminates the test from the admin panel while the user is active,
+  // immediately notify the student, lock the arena, and navigate to review
+  useEffect(() => {
+    if (!attemptId) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await getAttempt(attemptId);
+        const curAtt = res.data.statusCode?.attempt;
+        if (curAtt && curAtt.status !== 'in_progress') {
+          clearInterval(interval);
+          setAdminStoppedModal(true);
+          setTimeout(() => {
+            navigate(`/review/${attemptId}`, { replace: true });
+          }, 3000);
+        }
+      } catch (err) {
+        // network silent
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [attemptId, navigate]);
 
   // Code Draft Persistence (Auto-saves user code per problem in current attempt)
   const getDraftCode = useCallback((pId, currentLang) => {
@@ -1127,6 +1162,23 @@ export default function CodingArena() {
           navigate(`/review/${attemptId}`);
         }}
       />
+
+      {/* Admin Stopped Assessment Overlay */}
+      {adminStoppedModal && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#0e1628] border-2 border-rose-500 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl animate-in zoom-in-95 duration-200">
+            <span className="text-5xl block mb-4">🛑</span>
+            <h2 className="text-2xl font-black text-white mb-2">Assessment Concluded</h2>
+            <p className="text-rose-300 text-sm font-semibold mb-3">
+              An administrator has stopped this test session.
+            </p>
+            <p className="text-slate-400 text-xs mb-6 leading-relaxed">
+              All submissions made up to this moment have been recorded and saved. Redirecting to your assessment review...
+            </p>
+            <div className="w-8 h-8 border-3 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

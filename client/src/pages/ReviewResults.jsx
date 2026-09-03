@@ -350,6 +350,11 @@ export default function ReviewResults() {
               <span className="bg-rose-950/60 border border-rose-800/60 text-rose-300 text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1.5">
                 <span className="text-rose-400">●</span> Incorrect: {incorrectCount}
               </span>
+              {(attempt?.status === 'stopped_by_admin' || attempt?.stoppedByAdmin) && (
+                <span className="bg-rose-950/80 border border-rose-600 text-rose-300 text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
+                  <span>🛑</span> Concluded by Administrator
+                </span>
+              )}
               <span className="bg-[#18223a] border border-[#2a3656] text-slate-400 text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1.5">
                 <span className="text-slate-500">●</span> Skipped: {skippedCount}
               </span>

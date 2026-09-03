@@ -9,7 +9,8 @@ const attemptSchema = new Schema({
   totalTimeLimit: Number,  // copied from set at start
   submissions: [{ type: Schema.Types.ObjectId, ref: 'Submission' }],
   score: { type: Number, default: 0 },
-  status: { type: String, enum: ['in_progress', 'completed', 'timed_out'], default: 'in_progress' },
+  status: { type: String, enum: ['in_progress', 'completed', 'timed_out', 'stopped_by_admin'], default: 'in_progress' },
+  stoppedByAdmin: { type: Boolean, default: false },
   problemTimerElapsedSec: { type: Map, of: Number, default: {} },
 }, { timestamps: true });
 

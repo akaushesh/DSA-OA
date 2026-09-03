@@ -9,6 +9,9 @@ import {
   myAttempts,
   allAttempts,
   saveTimers,
+  adjustAttemptTime,
+  resetAttempt,
+  stopAttempt,
 } from '../controllers/attempt.controller.js';
 
 const router = Router();
@@ -19,6 +22,9 @@ router.put('/:id/end', endAttempt);
 router.delete('/:id', deleteAttempt);
 router.get('/my', myAttempts);
 router.get('/all', verifyAdmin, allAttempts);
+router.post('/:id/adjust-time', verifyAdmin, adjustAttemptTime);
+router.post('/:id/reset', verifyAdmin, resetAttempt);
+router.post('/:id/stop', verifyAdmin, stopAttempt);
 router.patch('/:id/timers', saveTimers);
 router.get('/:id', getAttemptReview);
 
