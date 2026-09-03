@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import authService from '../services/Auth';
 import { login } from '../app/authslice';
 import { setRole } from '../app/roleslice';
+import { myAttempts } from '../api/attempts';
 
 export default function Login() {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -22,6 +23,26 @@ export default function Login() {
       dispatch(login({ user, accessToken: authService.getAccessToken() }));
       dispatch(setRole(user.role || 'user'));
       toast.success(`Welcome back, ${user.fullName || user.username}!`);
+
+      if (user.role !== 'admin') {
+        try {
+          const res = await myAttempts({ limit: 10 });
+          const atts = res.data.statusCode?.attempts || [];
+          const ongoing = atts.find((a) => a.status === 'in_progress');
+          if (ongoing) {
+            const firstProb =
+              ongoing.questionSetId?.problems?.[0]?._id ||
+              ongoing.questionSetId?.problems?.[0] ||
+              '';
+            toast('Resuming your active test session in progress...', { icon: '⚡' });
+            navigate(`/attempt/${ongoing._id}/problem/${firstProb}`, { replace: true });
+            return;
+          }
+        } catch (err) {
+          // ignore error and proceed
+        }
+      }
+
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);

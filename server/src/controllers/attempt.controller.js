@@ -6,15 +6,19 @@ import { QuestionSet } from '../models/questionset.model.js';
 import { calculateAttemptScoreBreakdown, getDifficultyPoints } from '../utils/scoring.js';
 
 export const startAttempt = asyncHandler(async (req, res) => {
-  const { questionSetId } = req.body;
+  const { questionSetId, timingMode, totalTimeLimit } = req.body;
   if (!questionSetId) throw new ApiError(400, 'questionSetId required');
 
   const set = await QuestionSet.findById(questionSetId).populate('problems', 'difficulty');
   if (!set) throw new ApiError(404, 'Question set not found');
 
   // Check if user has an in_progress attempt for this set
-  const existing = await Attempt.findOne({ userId: req.user._id, questionSetId, status: 'in_progress' });
-  if (existing) return res.json(new ApiResponse(200, 'Resuming existing attempt', { attempt: existing }));
+  const existing = await Attempt.findOne({ userId: req.user._id, questionSetId, status: 'in_progress' })
+    .populate({
+      path: 'questionSetId',
+      populate: { path: 'problems', select: 'title difficulty category timeLimit starterCode' },
+    });
+  if (existing) return res.json(new ApiResponse(200, 'Resuming existing attempt', { attempt: existing, isResume: true }));
 
   const maxPossibleScore = (set.problems || []).reduce(
     (acc, p) => acc + getDifficultyPoints(p.difficulty).totalPoints,
@@ -24,8 +28,8 @@ export const startAttempt = asyncHandler(async (req, res) => {
   const attempt = await Attempt.create({
     userId: req.user._id,
     questionSetId,
-    timingMode: set.timingMode,
-    totalTimeLimit: set.totalTimeLimit,
+    timingMode: timingMode || set.timingMode || 'per_problem',
+    totalTimeLimit: totalTimeLimit || set.totalTimeLimit || 3600,
     maxPossibleScore,
   });
 

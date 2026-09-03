@@ -29,8 +29,23 @@ export default function Dashboard() {
       myAttempts({ limit: 100 }),
     ])
       .then(([setsRes, attemptsRes]) => {
+        const atts = attemptsRes.data.statusCode?.attempts || [];
         setSets(setsRes.data.statusCode?.sets || []);
-        setAttempts(attemptsRes.data.statusCode?.attempts || []);
+        setAttempts(atts);
+
+        // If user is a student and has an ongoing test in progress, always redirect to it
+        if (role !== 'admin') {
+          const ongoing = atts.find(a => a.status === 'in_progress');
+          if (ongoing) {
+            const firstProb =
+              ongoing.questionSetId?.problems?.[0]?._id ||
+              ongoing.questionSetId?.problems?.[0] ||
+              '';
+            toast('You have an active test in progress. Redirecting...', { icon: '⚡' });
+            navigate(`/attempt/${ongoing._id}/problem/${firstProb}`, { replace: true });
+            return;
+          }
+        }
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
@@ -332,12 +347,30 @@ export default function Dashboard() {
                             ✏️ Edit
                           </Link>
                         )}
-                        <Link
-                          to={`/sets/${set._id}`}
-                          className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow"
-                        >
-                          Start Assessment &rarr;
-                        </Link>
+                        {(() => {
+                          const activeAttempt = attempts.find(
+                            a => (a.questionSetId?._id || a.questionSetId)?.toString() === set._id.toString() && a.status === 'in_progress'
+                          );
+                          if (activeAttempt) {
+                            const firstProb = activeAttempt.questionSetId?.problems?.[0]?._id || activeAttempt.questionSetId?.problems?.[0] || set.problems?.[0]?._id || set.problems?.[0] || '';
+                            return (
+                              <Link
+                                to={`/attempt/${activeAttempt._id}/problem/${firstProb}`}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow animate-pulse"
+                              >
+                                <span>⚡</span> Resume Test &rarr;
+                              </Link>
+                            );
+                          }
+                          return (
+                            <Link
+                              to={`/sets/${set._id}`}
+                              className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow"
+                            >
+                              Start Assessment &rarr;
+                            </Link>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -403,17 +436,26 @@ export default function Dashboard() {
                             ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60'
                             : a.status === 'timed_out'
                             ? 'bg-rose-950/60 text-rose-400 border-rose-800/60'
-                            : 'bg-amber-950/60 text-amber-400 border-amber-800/60'
+                            : 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60 font-bold animate-pulse'
                         }`}>
-                          {a.status?.replace('_', ' ')}
+                          {a.status === 'in_progress' ? '● In Progress' : a.status?.replace('_', ' ')}
                         </span>
 
-                        <Link
-                          to={`/review/${a._id}`}
-                          className="text-xs text-sky-400 hover:text-sky-300 font-semibold border border-sky-800/60 bg-sky-950/40 px-3 py-1 rounded-xl transition"
-                        >
-                          Review &rarr;
-                        </Link>
+                        {a.status === 'in_progress' ? (
+                          <Link
+                            to={`/attempt/${a._id}/problem/${a.questionSetId?.problems?.[0]?._id || a.questionSetId?.problems?.[0] || ''}`}
+                            className="text-xs text-white font-bold bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/50 px-3 py-1 rounded-xl transition shadow flex items-center gap-1 animate-pulse"
+                          >
+                            <span>⚡</span> Resume
+                          </Link>
+                        ) : (
+                          <Link
+                            to={`/review/${a._id}`}
+                            className="text-xs text-sky-400 hover:text-sky-300 font-semibold border border-sky-800/60 bg-sky-950/40 px-3 py-1 rounded-xl transition"
+                          >
+                            Review &rarr;
+                          </Link>
+                        )}
                       </div>
                     </div>
                   );

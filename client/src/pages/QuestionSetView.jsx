@@ -1,7 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 import { getQuestionSet } from '../api/questionsets';
-import { startAttempt } from '../api/attempts';
+import { startAttempt, myAttempts } from '../api/attempts';
 import Navbar from '../components/Navbar';
 import Loader from '../components/Loader';
 
@@ -10,10 +12,12 @@ const TIMER_PRESETS = [5, 10, 15, 20, 30, 45];
 export default function QuestionSetView() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const role = useSelector((state) => state.role.role);
 
   const [set, setSet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [ongoingAttempt, setOngoingAttempt] = useState(null);
 
   // Configuration State
   const [attemptMode, setAttemptMode] = useState('full'); // 'single' | 'full'
@@ -43,6 +47,24 @@ export default function QuestionSetView() {
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
+
+    myAttempts()
+      .then(r => {
+        const atts = r.data.statusCode?.attempts || [];
+        const active = atts.find(a => a.status === 'in_progress');
+        if (active && role !== 'admin') {
+          const firstProb =
+            active.questionSetId?.problems?.[0]?._id ||
+            active.questionSetId?.problems?.[0] ||
+            '';
+          toast('You have an active test session in progress. Redirecting...', { icon: '⚡' });
+          navigate(`/attempt/${active._id}/problem/${firstProb}`, { replace: true });
+          return;
+        }
+        const found = atts.find(a => (a.questionSetId?._id || a.questionSetId)?.toString() === id && a.status === 'in_progress');
+        setOngoingAttempt(found || null);
+      })
+      .catch(err => console.error(err));
   }, [id]);
 
   // Extract unique sections / categories from the set
@@ -71,8 +93,19 @@ export default function QuestionSetView() {
     if (!set || starting) return;
     setStarting(true);
     try {
-      const res = await startAttempt(id);
+      const selectedTimerMode = attemptMode === 'full' ? (timerMode === 'per_section' ? 'per_problem' : 'collective') : 'collective';
+      const selectedTotalTimeLimit = durationMinutes * 60;
+
+      const res = await startAttempt(id, {
+        timingMode: selectedTimerMode,
+        totalTimeLimit: selectedTotalTimeLimit,
+      });
       const attempt = res.data.statusCode?.attempt;
+      const isResume = res.data.statusCode?.isResume;
+
+      if (isResume) {
+        toast.success('Resuming your active test session...');
+      }
       
       // Save configuration settings in sessionStorage for this attempt
       const config = {
@@ -80,8 +113,8 @@ export default function QuestionSetView() {
         questionSetId: id,
         attemptMode,
         selectedSection,
-        timerMode: attemptMode === 'full' ? (timerMode === 'per_section' ? 'per_problem' : 'collective') : 'collective',
-        totalTimeLimit: durationMinutes * 60,
+        timerMode: selectedTimerMode,
+        totalTimeLimit: selectedTotalTimeLimit,
         customQuestionTimes,
         activeProblemIds: activeQuestions.map(p => p._id),
       };
@@ -132,6 +165,34 @@ export default function QuestionSetView() {
               </p>
             </div>
           </div>
+
+          {/* Ongoing Test Alert Banner */}
+          {ongoingAttempt && (
+            <div className="bg-emerald-950/40 border-2 border-emerald-500/70 rounded-2xl p-5 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fadeIn">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-xl shrink-0">
+                  ⚡
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-white font-extrabold text-sm">Active Test Session in Progress</h3>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  </div>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    You have an ongoing assessment session for this set. Resuming will bring you right back into the coding arena with your timer and answers intact.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleStartTest}
+                disabled={starting}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition shadow flex items-center gap-1.5 shrink-0"
+              >
+                <span>⚡</span> {starting ? 'Resuming...' : 'Resume Ongoing Test →'}
+              </button>
+            </div>
+          )}
 
           {/* Selected Question Bank Info Card */}
           <div className="bg-[#0c1426] border border-[#1e2a47] rounded-2xl p-5 space-y-2.5">
@@ -209,7 +270,7 @@ export default function QuestionSetView() {
                 >
                   All ({totalQuestions})
                 </button>
-                {sections.map(sec => (
+                {sections.map((sec, idx) => (
                   <button
                     key={sec.name}
                     type="button"
@@ -220,7 +281,7 @@ export default function QuestionSetView() {
                         : 'bg-[#0c1426] border-[#1e2a47] text-slate-300 hover:text-white'
                     }`}
                   >
-                    {sec.name} ({sec.count})
+                    Section {idx + 1} ({sec.count})
                   </button>
                 ))}
               </div>
@@ -336,7 +397,7 @@ export default function QuestionSetView() {
                             <span className="font-bold text-sky-400">Q{idx + 1}.</span>
                             <span className="font-semibold text-white truncate max-w-[200px]">{q.title}</span>
                           </div>
-                          <span className="text-[10px] text-slate-400 uppercase font-mono">{q.category || set.category}</span>
+                          <span className="text-[10px] text-slate-400 uppercase font-mono">{q.difficulty || 'Easy'}</span>
                         </div>
 
                         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -388,7 +449,7 @@ export default function QuestionSetView() {
                 {sections.map((sec, idx) => (
                   <div key={sec.name} className="flex items-center gap-2">
                     <span className="bg-purple-950/80 border border-purple-800 text-purple-300 font-semibold px-2.5 py-1 rounded-lg">
-                      {idx + 1}. {sec.name}
+                      Section {idx + 1}
                     </span>
                     {idx < sections.length - 1 && <span className="text-purple-400">→</span>}
                   </div>
@@ -415,13 +476,17 @@ export default function QuestionSetView() {
               onClick={handleStartTest}
               disabled={starting || activeQuestions.length === 0}
               className={`flex-1 font-extrabold py-3.5 rounded-2xl text-xs md:text-sm transition text-white shadow-lg active:scale-95 disabled:opacity-50 ${
-                attemptMode === 'full'
+                ongoingAttempt
+                  ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-950/50'
+                  : attemptMode === 'full'
                   ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-950/50'
                   : 'bg-blue-600 hover:bg-blue-500 shadow-blue-950/50'
               }`}
             >
               {starting
-                ? 'Starting Assessment...'
+                ? 'Resuming Session...'
+                : ongoingAttempt
+                ? '⚡ Resume Active Assessment →'
                 : attemptMode === 'full'
                 ? 'Start Full Mock Test'
                 : 'Start Test'}

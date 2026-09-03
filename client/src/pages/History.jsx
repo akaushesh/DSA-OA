@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { myAttempts, getAttempt, deleteAttempt } from '../api/attempts';
 import Navbar from '../components/Navbar';
@@ -19,13 +20,28 @@ export default function History() {
   const [selectedCodeView, setSelectedCodeView] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const location = useLocation();
+  const navigate = useNavigate();
+  const role = useSelector((state) => state.role.role);
   const timedOut = location.state?.timedOut;
 
   useEffect(() => {
     myAttempts()
-      .then(r => setAttempts(r.data.statusCode?.attempts || []))
+      .then(r => {
+        const atts = r.data.statusCode?.attempts || [];
+        const active = atts.find(a => a.status === 'in_progress');
+        if (active && role !== 'admin') {
+          const firstProb =
+            active.questionSetId?.problems?.[0]?._id ||
+            active.questionSetId?.problems?.[0] ||
+            '';
+          toast('You have an active test session in progress. Redirecting...', { icon: '⚡' });
+          navigate(`/attempt/${active._id}/problem/${firstProb}`, { replace: true });
+          return;
+        }
+        setAttempts(atts);
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [role, navigate]);
 
   const handleSelectAttempt = async (attemptId) => {
     if (selectedAttemptId === attemptId) {
@@ -147,13 +163,23 @@ export default function History() {
                       </span>
 
                       <div className="flex items-center gap-2">
-                        <Link
-                          to={`/review/${a._id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow"
-                        >
-                          <span>📊</span> Full Review
-                        </Link>
+                        {a.status === 'in_progress' ? (
+                          <Link
+                            to={`/attempt/${a._id}/problem/${a.questionSetId?.problems?.[0]?._id || a.questionSetId?.problems?.[0] || ''}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow animate-pulse"
+                          >
+                            <span>⚡</span> Resume Test
+                          </Link>
+                        ) : (
+                          <Link
+                            to={`/review/${a._id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow"
+                          >
+                            <span>📊</span> Full Review
+                          </Link>
+                        )}
                         
                         {/* Delete Attempt Button */}
                         <button

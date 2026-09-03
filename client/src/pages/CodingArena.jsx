@@ -80,13 +80,21 @@ export default function CodingArena() {
             const probs = qs?.problems || [];
             setAllProblems(probs);
 
-            // Seed per-problem timers: remaining = configured - elapsed (survives reload)
+            // Seed per-problem timers: takes MAX of server and local elapsed (guarantees persistence across refresh)
             if (att.timingMode === 'per_problem') {
+              let localMap = {};
+              try {
+                localMap = JSON.parse(localStorage.getItem(`oa_all_elapsed_${att._id}`) || '{}');
+              } catch (e) {}
+
               const timers = {};
               probs.forEach(p => {
-                const pId = p._id || p;
-                const elapsed = att.problemTimerElapsedSec?.[pId] || 0;
-                timers[pId] = Math.max(0, (p.timeLimit || 1800) - elapsed);
+                const pId = (p._id || p).toString();
+                const sElapsed = att.problemTimerElapsedSec?.[pId] || 0;
+                const lElapsed = Number(localMap[pId] || localStorage.getItem(`oa_elapsed_${att._id}_${pId}`) || 0);
+                const trueElapsed = Math.max(sElapsed, lElapsed);
+                const pLimit = p.timeLimit || 1800;
+                timers[pId] = Math.max(0, pLimit - trueElapsed);
               });
               setProblemTimers(timers);
             }
@@ -95,7 +103,15 @@ export default function CodingArena() {
       })
       .catch(err => {
         console.error(err);
-        toast.error('Failed to load attempt details');
+        if (err.response?.status === 403) {
+          toast.error('You can only resume your own active test sessions.');
+          navigate('/dashboard', { replace: true });
+        } else if (err.response?.status === 404) {
+          toast.error('Assessment session not found.');
+          navigate('/dashboard', { replace: true });
+        } else {
+          toast.error('Failed to load attempt details');
+        }
       });
 
     // Fetch answered problems for THIS attempt session only
@@ -346,28 +362,101 @@ export default function CodingArena() {
     return () => window.removeEventListener('keydown', handleShortcut, true);
   }, [handleSubmit]);
 
-  // Per-problem tick: only the active problem's timer counts down.
-  // Others are frozen until the user navigates to them — mirrors Apti-OA freeNavTimers.
+  // Per-problem tick: active problem's timer counts down and immediately syncs to localStorage
   useEffect(() => {
-    if (attempt?.timingMode !== 'per_problem' || !problemId) return;
-    const remaining = problemTimers[problemId] ?? 0;
+    if (attempt?.timingMode !== 'per_problem' || !problemId || !problem) return;
+    const remaining = problemTimers[problemId] ?? (problem.timeLimit || 1800);
     if (remaining <= 0) return;
-    const t = setTimeout(() =>
-      setProblemTimers(prev => ({ ...prev, [problemId]: Math.max(0, (prev[problemId] ?? 0) - 1) }))
-    , 1000);
-    return () => clearTimeout(t);
-  }, [problemTimers, problemId, attempt]);
 
-  // Flush current elapsed to server before navigating (so reload reseeds correctly)
+    const t = setTimeout(() => {
+      setProblemTimers(prev => {
+        const currentRem = prev[problemId] ?? (problem.timeLimit || 1800);
+        const newRem = Math.max(0, currentRem - 1);
+        const next = { ...prev, [problemId]: newRem };
+
+        // Synchronously save elapsed to localStorage so refresh CANNOT reset the timer
+        const pLimit = problem.timeLimit || 1800;
+        const elapsed = pLimit - newRem;
+        try {
+          localStorage.setItem(`oa_elapsed_${attemptId}_${problemId}`, elapsed.toString());
+          const localMap = JSON.parse(localStorage.getItem(`oa_all_elapsed_${attemptId}`) || '{}');
+          localMap[problemId] = elapsed;
+          localStorage.setItem(`oa_all_elapsed_${attemptId}`, JSON.stringify(localMap));
+        } catch (e) {}
+
+        return next;
+      });
+    }, 1000);
+
+    return () => clearTimeout(t);
+  }, [problemTimers, problemId, attempt, problem, attemptId]);
+
+  // Flush current elapsed to server before navigating or reloading
   const flushTimers = useCallback(async () => {
     if (attempt?.timingMode !== 'per_problem') return;
     const elapsed = Object.fromEntries(
       allProblems.map(p => {
-        const pId = p._id || p;
-        return [pId, (p.timeLimit || 1800) - (problemTimers[pId] ?? 0)];
+        const pId = (p._id || p).toString();
+        const pLimit = p.timeLimit || 1800;
+        return [pId, pLimit - (problemTimers[pId] ?? pLimit)];
       })
     );
+    try {
+      localStorage.setItem(`oa_all_elapsed_${attemptId}`, JSON.stringify(elapsed));
+    } catch (e) {}
     await saveTimers(attemptId, { problemTimerElapsedSec: elapsed }).catch(() => {});
+  }, [attempt, allProblems, problemTimers, attemptId]);
+
+  // Periodic background sync of elapsed timers to MongoDB every 4 seconds
+  useEffect(() => {
+    if (attempt?.timingMode !== 'per_problem' || !allProblems.length) return;
+    const interval = setInterval(() => {
+      const elapsed = Object.fromEntries(
+        allProblems.map(p => {
+          const pId = (p._id || p).toString();
+          const pLimit = p.timeLimit || 1800;
+          return [pId, pLimit - (problemTimers[pId] ?? pLimit)];
+        })
+      );
+      saveTimers(attemptId, { problemTimerElapsedSec: elapsed }).catch(() => {});
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [attempt, allProblems, problemTimers, attemptId]);
+
+  // Save timers on tab unload / reload using sendBeacon / keepalive fetch
+  useEffect(() => {
+    const handleUnload = () => {
+      if (attempt?.timingMode !== 'per_problem' || !allProblems.length) return;
+      const elapsed = Object.fromEntries(
+        allProblems.map(p => {
+          const pId = (p._id || p).toString();
+          const pLimit = p.timeLimit || 1800;
+          return [pId, pLimit - (problemTimers[pId] ?? pLimit)];
+        })
+      );
+      try {
+        localStorage.setItem(`oa_all_elapsed_${attemptId}`, JSON.stringify(elapsed));
+      } catch (e) {}
+
+      const token = localStorage.getItem('accessToken');
+      fetch(`/api/attempts/${attemptId}/timers`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ problemTimerElapsedSec: elapsed }),
+        keepalive: true,
+      }).catch(() => {});
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
+    };
   }, [attempt, allProblems, problemTimers, attemptId]);
 
   const isCurrentLocked = attempt?.timingMode === 'per_problem' && (problemTimers[problemId] ?? 1) <= 0;
@@ -405,13 +494,31 @@ export default function CodingArena() {
     toast.success('Previous code loaded into editor');
   };
 
-  // Collective mode: compute remaining from startedAt + totalTimeLimit
-  const collectiveTimeLeft = useMemo(() => {
-    if (attempt?.timingMode === 'per_problem') return 0;
-    const limit = attempt?.totalTimeLimit || questionSet?.totalTimeLimit || 3600;
-    const started = attempt?.startedAt ? new Date(attempt.startedAt).getTime() : Date.now();
-    const elapsed = Math.floor((Date.now() - started) / 1000);
-    return Math.max(0, limit - elapsed);
+  // Collective mode: true server-based elapsed time from startedAt + totalTimeLimit
+  const [collectiveSeconds, setCollectiveSeconds] = useState(null);
+
+  useEffect(() => {
+    if (attempt?.timingMode === 'per_problem' || !attempt) return;
+    const limit = attempt.totalTimeLimit || questionSet?.totalTimeLimit || 3600;
+    const started = attempt.startedAt ? new Date(attempt.startedAt).getTime() : Date.now();
+
+    const calcRemaining = () => {
+      const elapsed = Math.floor((Date.now() - started) / 1000);
+      return Math.max(0, limit - elapsed);
+    };
+
+    setCollectiveSeconds(calcRemaining());
+
+    const interval = setInterval(() => {
+      const rem = calcRemaining();
+      setCollectiveSeconds(rem);
+      if (rem <= 0) {
+        clearInterval(interval);
+        handleEndAttempt();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, [attempt, questionSet]);
 
   if (!problem) {
@@ -438,7 +545,7 @@ export default function CodingArena() {
               {questionSet?.name || 'Assessment Test'}
             </h1>
             <p className="text-[10px] text-sky-400 font-bold uppercase tracking-wider">
-              {(problem.category || 'DSA').toUpperCase()} · Q{currentQNum}/{allProblems.length || 1}
+              QUESTION {currentQNum} OF {allProblems.length || 1}
             </p>
           </div>
         </div>
@@ -462,31 +569,41 @@ export default function CodingArena() {
                 </span>
               </div>
             );
-          })() : (
-            <div className="bg-[#080d1a] border border-sky-500/50 shadow-lg shadow-sky-950/50 px-5 py-1.5 rounded-full flex items-center gap-2">
-              <span className="font-mono font-bold text-base tracking-wider tabular-nums text-green-400">
-                ⏱ {formatTime(collectiveTimeLeft)}
-              </span>
-            </div>
-          )}
+          })() : (() => {
+            const secs = collectiveSeconds ?? 0;
+            const isLow = secs > 0 && secs < 180;
+            return (
+              <div className={`border shadow-lg shadow-sky-950/50 px-5 py-1.5 rounded-full flex items-center gap-2 transition-all ${
+                isLow ? 'bg-[#080d1a] border-red-500/70 animate-pulse' : 'bg-[#080d1a] border-sky-500/50'
+              }`}>
+                <span className={`font-mono font-bold text-base tracking-wider tabular-nums ${
+                  isLow ? 'text-red-400' : 'text-green-400'
+                }`}>
+                  ⏱ {formatTime(secs)}
+                </span>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Right: Section Indicators & End Action */}
         <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-1.5">
-            {sections.map((sec, idx) => (
-              <span
-                key={sec.name}
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition ${
-                  (problem.category || 'General') === sec.name
-                    ? 'bg-purple-600 text-white border-purple-500 shadow'
-                    : 'bg-[#18223a] text-slate-400 border-[#243352]'
-                }`}
-              >
-                {idx + 1}. {sec.name}
-              </span>
-            ))}
-          </div>
+          {sections.length > 1 && (
+            <div className="hidden lg:flex items-center gap-1.5">
+              {sections.map((sec, idx) => (
+                <span
+                  key={sec.name}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition ${
+                    (problem.category || 'General') === sec.name
+                      ? 'bg-purple-600 text-white border-purple-500 shadow'
+                      : 'bg-[#18223a] text-slate-400 border-[#243352]'
+                  }`}
+                >
+                  Section {idx + 1}
+                </span>
+              ))}
+            </div>
+          )}
 
           <button
             onClick={handleEndAttempt}
@@ -507,29 +624,31 @@ export default function CodingArena() {
           <div className="p-4 overflow-y-auto space-y-6">
             
             {/* Current Section Title */}
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                SECTION LIST
-              </span>
-              <div className="space-y-1.5">
-                {sections.map((sec, idx) => {
-                  const isCurrent = (problem.category || 'General') === sec.name;
-                  return (
-                    <div
-                      key={sec.name}
-                      className={`p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between border transition ${
-                        isCurrent
-                          ? 'bg-purple-950/60 border-purple-700/80 text-purple-200 shadow'
-                          : 'bg-[#11192e] border-[#1e2a47] text-slate-400'
-                      }`}
-                    >
-                      <span className="truncate">{idx + 1}. {sec.name}</span>
-                      <span>{isCurrent ? '▶' : '•'}</span>
-                    </div>
-                  );
-                })}
+            {sections.length > 1 && (
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                  SECTION LIST
+                </span>
+                <div className="space-y-1.5">
+                  {sections.map((sec, idx) => {
+                    const isCurrent = (problem.category || 'General') === sec.name;
+                    return (
+                      <div
+                        key={sec.name}
+                        className={`p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between border transition ${
+                          isCurrent
+                            ? 'bg-purple-950/60 border-purple-700/80 text-purple-200 shadow'
+                            : 'bg-[#11192e] border-[#1e2a47] text-slate-400'
+                        }`}
+                      >
+                        <span className="truncate">Section {idx + 1}</span>
+                        <span>{isCurrent ? '▶' : '•'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* QUESTION MAP GRID */}
             <div>
@@ -702,9 +821,6 @@ export default function CodingArena() {
                       <span className="text-xs font-mono font-bold text-amber-300 bg-amber-950/40 border border-amber-800/60 px-2.5 py-0.5 rounded-full">
                         ⭐ Max {getDifficultyPoints(problem.difficulty).totalPoints} pts
                       </span>
-                      <span className="text-xs text-slate-400 bg-[#18223a] border border-[#243352] px-2.5 py-0.5 rounded-full font-mono">
-                        {problem.category}
-                      </span>
                     </div>
                     <h2 className="text-xl font-extrabold text-white mb-3">{problem.title}</h2>
                     <p className="text-slate-300 leading-relaxed whitespace-pre-wrap text-sm">
@@ -870,7 +986,7 @@ export default function CodingArena() {
                             : calculateProblemScore(problem.difficulty, submission.passedTests, submission.totalTests);
                           const maxProbScore = Math.max(
                             runScore,
-                            ...(submissions || []).map(s => s.score !== undefined ? s.score : calculateProblemScore(problem.difficulty, s.passedTests, s.totalTests))
+                            ...(submissionsList || []).map(s => s.score !== undefined && s.score !== null ? s.score : calculateProblemScore(problem.difficulty, s.passedTests, s.totalTests))
                           );
 
                           return (
