@@ -72,7 +72,19 @@ class AuthService {
   }
 
   isLoggedIn() {
-    return !!this.getAccessToken();
+    return !!this.getAccessToken() && !this.isTokenExpired();
+  }
+
+  isTokenExpired(token = this.getAccessToken()) {
+    if (!token) return true;
+    try {
+      const parts = token.split(".");
+      if (parts.length !== 3) return true;
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+      return !payload.exp || Date.now() >= payload.exp * 1000;
+    } catch {
+      return true;
+    }
   }
 
   clearAuthData() {

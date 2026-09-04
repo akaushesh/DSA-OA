@@ -66,6 +66,8 @@ export default function Login() {
             <label className="text-xs text-gray-400 uppercase tracking-wide">Username</label>
             <input
               type="text"
+              name="username"
+              autoComplete="username"
               value={form.username}
               onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
               className="mt-1 w-full bg-[#0f0f1c] border border-[#2d2d44] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
@@ -76,6 +78,8 @@ export default function Login() {
             <label className="text-xs text-gray-400 uppercase tracking-wide">Password</label>
             <input
               type="password"
+              name="password"
+              autoComplete="current-password"
               value={form.password}
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               className="mt-1 w-full bg-[#0f0f1c] border border-[#2d2d44] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"

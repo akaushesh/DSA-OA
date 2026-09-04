@@ -305,6 +305,16 @@ export default function CodingArena() {
     toast(`Switched to ${newLang === 'cpp' ? 'C++' : 'Java'}`);
   };
 
+  const handleResetCode = () => {
+    // ponytail: native confirm avoids modal boilerplate while preventing accidental code loss
+    if (!window.confirm('Reset code to starter template? Your current changes will be discarded.')) return;
+    const customStarter = problem?.starterCode?.[lang];
+    const starter = customStarter || STARTERS[lang]?.(problem?.title || 'Solution') || '';
+    setCode(starter);
+    saveDraftCode(problemId, lang, starter);
+    toast.success('Code reset to starter template');
+  };
+
   const pollSubmission = useCallback((subId) => {
     setPolling(true);
     let tries = 0;
@@ -1407,7 +1417,17 @@ export default function CodingArena() {
                   </select>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleResetCode}
+                    disabled={submitting || polling}
+                    title="Reset code to starter template"
+                    className="bg-[#18223a] hover:bg-[#202d4d] active:scale-95 disabled:opacity-50 border border-[#2a3656] text-slate-300 hover:text-white font-semibold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1.5"
+                  >
+                    <span>↺</span>
+                    <span>Start Over</span>
+                  </button>
                   <button
                     onClick={handleSubmit}
                     disabled={submitting || polling}

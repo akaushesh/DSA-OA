@@ -5,7 +5,6 @@ import Loader from './components/Loader.jsx';
 import { login, logout } from './app/authslice';
 import { setRole } from './app/roleslice';
 import { Outlet } from 'react-router-dom';
-import API from './api/axios.js';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
@@ -13,9 +12,9 @@ function App() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    const token = authService.getAccessToken();
+    if (token && !authService.isTokenExpired(token)) {
+      authService.setAuthHeader(token);
       authService
         .getCurrentUser()
         .then((user) => {
@@ -24,15 +23,16 @@ function App() {
             dispatch(setRole(user.role || 'user'));
           } else {
             dispatch(logout());
-            localStorage.removeItem('accessToken');
+            authService.clearAuthData();
           }
         })
         .catch(() => {
           dispatch(logout());
-          localStorage.removeItem('accessToken');
+          authService.clearAuthData();
         })
         .finally(() => setLoading(false));
     } else {
+      if (token) authService.clearAuthData();
       dispatch(logout());
       setLoading(false);
     }
