@@ -6,7 +6,7 @@ import { QuestionSet } from '../models/questionset.model.js';
 import { calculateAttemptScoreBreakdown, getDifficultyPoints } from '../utils/scoring.js';
 
 export const startAttempt = asyncHandler(async (req, res) => {
-  const { questionSetId, timingMode, totalTimeLimit } = req.body;
+  const { questionSetId, timingMode, totalTimeLimit, preferredLanguage } = req.body;
   if (!questionSetId) throw new ApiError(400, 'questionSetId required');
 
   const set = await QuestionSet.findById(questionSetId).populate('problems', 'difficulty');
@@ -18,7 +18,13 @@ export const startAttempt = asyncHandler(async (req, res) => {
       path: 'questionSetId',
       populate: { path: 'problems', select: 'title difficulty category timeLimit starterCode' },
     });
-  if (existing) return res.json(new ApiResponse(200, 'Resuming existing attempt', { attempt: existing, isResume: true }));
+  if (existing) {
+    if (preferredLanguage && !existing.preferredLanguage) {
+      existing.preferredLanguage = preferredLanguage;
+      await existing.save();
+    }
+    return res.json(new ApiResponse(200, 'Resuming existing attempt', { attempt: existing, isResume: true }));
+  }
 
   const maxPossibleScore = (set.problems || []).reduce(
     (acc, p) => acc + getDifficultyPoints(p.difficulty).totalPoints,
@@ -31,6 +37,7 @@ export const startAttempt = asyncHandler(async (req, res) => {
     timingMode: timingMode || set.timingMode || 'per_problem',
     totalTimeLimit: totalTimeLimit || set.totalTimeLimit || 3600,
     maxPossibleScore,
+    preferredLanguage: preferredLanguage || 'cpp',
   });
 
   return res.status(201).json(new ApiResponse(201, 'Attempt started', { attempt }));
@@ -84,7 +91,7 @@ export const getAttemptReview = asyncHandler(async (req, res) => {
       select: 'name category problems timingMode totalTimeLimit description',
       populate: {
         path: 'problems',
-        select: 'title difficulty category timeLimit constraints description examples testCases',
+        select: 'title difficulty category timeLimit constraints inputFormat outputFormat description examples testCases',
       },
     })
     .populate({

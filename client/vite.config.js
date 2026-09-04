@@ -11,6 +11,11 @@ export default defineConfig({
   server: {
     port: 5174,
     strictPort: true,
+    allowedHosts: [
+      'juvenile-unhitched-ventricle.ngrok-free.dev',
+      '.ngrok-free.dev',
+      '.ngrok-free.app',
+    ],
     proxy: {
       '/api': {
         target: 'http://localhost:8081',

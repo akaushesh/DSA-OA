@@ -196,8 +196,8 @@ export async function runAllTestCases({ language, code, testCases, timeLimit = 5
       testCaseIndex: i,
       isHidden: tc.isHidden,
       passed: tcPassed,
-      stdout: tc.isHidden ? null : res.stdout,
-      stderr: tc.isHidden ? null : res.stderr,
+      stdout: res.stdout,
+      stderr: res.stderr,
       time: elapsed,
     });
   }

@@ -1,13 +1,18 @@
 import axios from 'axios';
 
+// ponytail: always use relative '/api' unless an external production URL is given
+const envUrl = import.meta.env.VITE_API_URL;
+const baseURL = (envUrl && !envUrl.includes('localhost')) ? envUrl : '/api';
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8081/api',
+  baseURL,
   withCredentials: true,
 });
 
 API.interceptors.request.use(config => {
   const token = localStorage.getItem('accessToken');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  config.headers['ngrok-skip-browser-warning'] = 'true';
   return config;
 });
 

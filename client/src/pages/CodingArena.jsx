@@ -26,8 +26,23 @@ export default function CodingArena() {
   const [allProblems, setAllProblems] = useState([]);
   
   // Editor & Submission State
-  const [lang, setLang] = useState('cpp');
-  const [code, setCode] = useState(STARTERS.cpp());
+  const [lang, setLang] = useState(() => {
+    try {
+      const attemptLang = sessionStorage.getItem(`attempt_lang_${attemptId}`);
+      if (attemptLang === 'cpp' || attemptLang === 'java') return attemptLang;
+      const configStr = sessionStorage.getItem(`attempt_config_${attemptId}`);
+      if (configStr) {
+        const config = JSON.parse(configStr);
+        if (config.preferredLanguage === 'cpp' || config.preferredLanguage === 'java') {
+          return config.preferredLanguage;
+        }
+      }
+      const userPref = localStorage.getItem('preferredLanguage');
+      if (userPref === 'cpp' || userPref === 'java') return userPref;
+    } catch {}
+    return 'cpp';
+  });
+  const [code, setCode] = useState(() => STARTERS[lang] ? STARTERS[lang]() : STARTERS.cpp());
   const [activeTab, setActiveTab] = useState('problem'); // 'problem' | 'results' | 'submissions'
   const [submitting, setSubmitting] = useState(false);
   const [submission, setSubmission] = useState(null);
@@ -114,6 +129,18 @@ export default function CodingArena() {
         }
 
         setAttempt(att);
+        if (att?.preferredLanguage) {
+          try {
+            if (!sessionStorage.getItem(`attempt_lang_${attemptId}`)) {
+              sessionStorage.setItem(`attempt_lang_${attemptId}`, att.preferredLanguage);
+            }
+            localStorage.setItem('preferredLanguage', att.preferredLanguage);
+          } catch {}
+          setLang(current => {
+            const hasDraft = sessionStorage.getItem(`draft_${attemptId}_${problemId}_${current}`);
+            return hasDraft ? current : att.preferredLanguage;
+          });
+        }
         if (att?.questionSetId) {
           getQuestionSet(att.questionSetId._id || att.questionSetId).then(setRes => {
             const qs = setRes.data.statusCode?.set;
@@ -300,6 +327,10 @@ export default function CodingArena() {
 
   const changeLang = (newLang) => {
     setLang(newLang);
+    try {
+      sessionStorage.setItem(`attempt_lang_${attemptId}`, newLang);
+      localStorage.setItem('preferredLanguage', newLang);
+    } catch {}
     const customStarter = problem?.starterCode?.[newLang];
     setCode(customStarter || STARTERS[newLang](problem?.title || 'Solution'));
     toast(`Switched to ${newLang === 'cpp' ? 'C++' : 'Java'}`);
@@ -1009,6 +1040,30 @@ export default function CodingArena() {
                     </div>
                   )}
 
+                  {/* Input Format */}
+                  {problem.inputFormat && (
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Input Format
+                      </h4>
+                      <pre className="text-xs font-mono text-slate-200 bg-[#080d1a] border border-[#1e2a47] rounded-xl p-3.5 whitespace-pre-wrap leading-relaxed">
+                        {problem.inputFormat}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Output Format */}
+                  {problem.outputFormat && (
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Output Format
+                      </h4>
+                      <pre className="text-xs font-mono text-slate-200 bg-[#080d1a] border border-[#1e2a47] rounded-xl p-3.5 whitespace-pre-wrap leading-relaxed">
+                        {problem.outputFormat}
+                      </pre>
+                    </div>
+                  )}
+
                   {/* Constraints */}
                   {problem.constraints && (
                     <div>
@@ -1031,12 +1086,14 @@ export default function CodingArena() {
                         {problem.examples.map((ex, i) => (
                           <div key={i} className="bg-[#11192e] border border-[#1e2a47] rounded-xl p-4 space-y-1.5">
                             <p className="text-xs font-bold text-sky-400 mb-1">Example {i + 1}</p>
-                            <p className="text-xs font-mono text-slate-300">
-                              <span className="text-slate-500 font-sans">Input:</span> <code className="text-emerald-400">{ex.input}</code>
-                            </p>
-                            <p className="text-xs font-mono text-slate-300">
-                              <span className="text-slate-500 font-sans">Output:</span> <code className="text-sky-400">{ex.output}</code>
-                            </p>
+                            <div className="text-xs font-mono text-slate-300">
+                              <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
+                              <pre className="text-emerald-400 whitespace-pre-wrap font-mono text-xs bg-[#080d1a] p-2 rounded border border-[#1e2a47]/60 overflow-x-auto">{ex.input}</pre>
+                            </div>
+                            <div className="text-xs font-mono text-slate-300">
+                              <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Output:</span>
+                              <pre className="text-sky-400 whitespace-pre-wrap font-mono text-xs bg-[#080d1a] p-2 rounded border border-[#1e2a47]/60 overflow-x-auto">{ex.output}</pre>
+                            </div>
                             {ex.explanation && (
                               <p className="text-xs text-slate-400 pt-1 border-t border-[#1e2a47]/50 mt-1">
                                 <span className="font-semibold text-slate-500">Explanation:</span> {ex.explanation}
@@ -1063,9 +1120,15 @@ export default function CodingArena() {
                         {visibleTestCases.map((tc, i) => (
                           <div key={i} className="bg-[#11192e] border border-[#1e2a47] rounded-xl p-4 space-y-2 text-xs font-mono">
                             <p className="text-[11px] font-bold text-sky-400 mb-1">Visible Case #{i + 1}</p>
-                            <div className="space-y-1 bg-[#080d1a] p-3 rounded-lg border border-[#1e2a47]">
-                              <p><span className="text-slate-500 font-sans">Input:</span> <code className="text-slate-200">{tc.input}</code></p>
-                              <p><span className="text-slate-500 font-sans">Expected Output:</span> <code className="text-emerald-400 font-bold">{tc.expectedOutput}</code></p>
+                            <div className="space-y-2 bg-[#080d1a] p-3 rounded-lg border border-[#1e2a47]">
+                              <div>
+                                <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
+                                <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.input}</pre>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Expected Output:</span>
+                                <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.expectedOutput}</pre>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -1209,22 +1272,22 @@ export default function CodingArena() {
                                     {originalTc && (
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-xs">
                                         <div className="bg-[#080d1a] border border-[#1e2a47] p-2.5 rounded-lg">
-                                          <span className="text-slate-500 font-sans block text-[11px]">Input:</span>
-                                          <code className="text-slate-200">{originalTc.input}</code>
+                                          <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
+                                          <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{originalTc.input}</pre>
                                         </div>
                                         <div className="bg-[#080d1a] border border-[#1e2a47] p-2.5 rounded-lg">
-                                          <span className="text-slate-500 font-sans block text-[11px]">Expected Output:</span>
-                                          <code className="text-emerald-400 font-bold">{originalTc.expectedOutput}</code>
+                                          <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Expected Output:</span>
+                                          <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{originalTc.expectedOutput}</pre>
                                         </div>
                                       </div>
                                     )}
 
                                     {/* User's Actual Output */}
                                     <div className="bg-[#080d1a] border border-[#1e2a47] p-2.5 rounded-lg font-mono text-xs">
-                                      <span className="text-slate-500 font-sans block text-[11px]">Your Output:</span>
-                                      <code className={tr.passed ? 'text-emerald-300 font-bold' : 'text-rose-400 font-bold'}>
+                                      <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Your Output:</span>
+                                      <pre className={`whitespace-pre-wrap font-mono text-xs overflow-x-auto ${tr.passed ? 'text-emerald-300 font-bold' : 'text-rose-400 font-bold'}`}>
                                         {tr.stdout !== null && tr.stdout !== undefined && tr.stdout !== '' ? tr.stdout : '<no output produced>'}
-                                      </code>
+                                      </pre>
                                     </div>
 
                                     {tr.stderr && (

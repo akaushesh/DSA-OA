@@ -8,6 +8,8 @@ const emptyForm = {
   description: '',
   difficulty: 'Medium',
   category: '',
+  inputFormat: '',
+  outputFormat: '',
   constraints: '',
   timeLimit: 1800,
   memoryLimit: 256,
@@ -34,6 +36,8 @@ export default function ProblemEditor() {
           description: p.description,
           difficulty: p.difficulty,
           category: p.category,
+          inputFormat: p.inputFormat || '',
+          outputFormat: p.outputFormat || '',
           constraints: p.constraints || '',
           timeLimit: p.timeLimit || 1800,
           memoryLimit: p.memoryLimit || 256,
@@ -116,6 +120,11 @@ export default function ProblemEditor() {
           <div>
             <label className={lbl}>Description</label>
             <textarea className={inp + ' h-36 resize-y'} value={form.description} onChange={e => set('description', e.target.value)} required />
+          </div>
+
+          <div>
+            <label className={lbl}>Input Format</label>
+            <textarea className={inp + ' h-16 resize-y font-mono text-xs'} placeholder="e.g. First line contains n and target..." value={form.inputFormat} onChange={e => set('inputFormat', e.target.value)} />
           </div>
 
           <div>

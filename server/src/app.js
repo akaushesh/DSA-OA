@@ -21,6 +21,8 @@ const isOriginAllowed = (origin) => {
   if (/^https:\/\/.*\.vercel\.app$/.test(cleanOrigin)) return true;
   if (/^https:\/\/.*\.devtunnels\.ms$/.test(cleanOrigin)) return true;
   if (/^https:\/\/.*\.github\.dev$/.test(cleanOrigin)) return true;
+  if (/^https:\/\/.*\.ngrok(-free)?\.(dev|app)$/.test(cleanOrigin)) return true;
+  if (/^https:\/\/.*\.ngrok\.io$/.test(cleanOrigin)) return true;
   return false;
 };
 
@@ -35,7 +37,7 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'ngrok-skip-browser-warning'],
   })
 );
 

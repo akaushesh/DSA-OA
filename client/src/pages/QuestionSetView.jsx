@@ -25,6 +25,13 @@ export default function QuestionSetView() {
   const [timerMode, setTimerMode] = useState('global'); // 'global' | 'per_section'
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [customQuestionTimes, setCustomQuestionTimes] = useState({}); // { [problemId]: minutes }
+  const [preferredLang, setPreferredLang] = useState(() => {
+    try {
+      return localStorage.getItem('preferredLanguage') || 'cpp';
+    } catch {
+      return 'cpp';
+    }
+  });
 
   useEffect(() => {
     getQuestionSet(id)
@@ -96,9 +103,14 @@ export default function QuestionSetView() {
       const selectedTimerMode = attemptMode === 'full' ? (timerMode === 'per_section' ? 'per_problem' : 'collective') : 'collective';
       const selectedTotalTimeLimit = durationMinutes * 60;
 
+      try {
+        localStorage.setItem('preferredLanguage', preferredLang);
+      } catch {}
+
       const res = await startAttempt(id, {
         timingMode: selectedTimerMode,
         totalTimeLimit: selectedTotalTimeLimit,
+        preferredLanguage: preferredLang,
       });
       const attempt = res.data.statusCode?.attempt;
       const isResume = res.data.statusCode?.isResume;
@@ -107,12 +119,15 @@ export default function QuestionSetView() {
         toast.success('Resuming your active test session...');
       }
       
+      sessionStorage.setItem(`attempt_lang_${attempt._id}`, preferredLang);
+
       // Save configuration settings in sessionStorage for this attempt
       const config = {
         attemptId: attempt._id,
         questionSetId: id,
         attemptMode,
         selectedSection,
+        preferredLanguage: preferredLang,
         timerMode: selectedTimerMode,
         totalTimeLimit: selectedTotalTimeLimit,
         customQuestionTimes,
@@ -327,6 +342,75 @@ export default function QuestionSetView() {
               </div>
             </div>
           )}
+
+          {/* PREFERRED PROGRAMMING LANGUAGE SELECTION */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                PREFERRED PROGRAMMING LANGUAGE
+              </label>
+              <span className="text-xs text-slate-400 font-mono">
+                Default for all problems in this test
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setPreferredLang('cpp');
+                  try { localStorage.setItem('preferredLanguage', 'cpp'); } catch {}
+                }}
+                className={`p-4 rounded-2xl border text-left transition flex items-center justify-between ${
+                  preferredLang === 'cpp'
+                    ? 'bg-sky-600 border-sky-500 text-white shadow-lg shadow-sky-950/50 ring-1 ring-sky-400'
+                    : 'bg-[#0c1426] border-[#1e2a47] text-slate-300 hover:border-slate-500'
+                }`}
+              >
+                <div>
+                  <div className="font-bold text-sm flex items-center gap-2">
+                    <span>⚡ C++</span>
+                    {preferredLang === 'cpp' && (
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-md font-semibold">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                  <div className={`text-xs mt-1 ${preferredLang === 'cpp' ? 'text-sky-100' : 'text-slate-400'}`}>
+                    GCC / Clang C++17
+                  </div>
+                </div>
+                <span className="text-xl">💻</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPreferredLang('java');
+                  try { localStorage.setItem('preferredLanguage', 'java'); } catch {}
+                }}
+                className={`p-4 rounded-2xl border text-left transition flex items-center justify-between ${
+                  preferredLang === 'java'
+                    ? 'bg-amber-600 border-amber-500 text-white shadow-lg shadow-amber-950/50 ring-1 ring-amber-400'
+                    : 'bg-[#0c1426] border-[#1e2a47] text-slate-300 hover:border-slate-500'
+                }`}
+              >
+                <div>
+                  <div className="font-bold text-sm flex items-center gap-2">
+                    <span>☕ Java</span>
+                    {preferredLang === 'java' && (
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-md font-semibold">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                  <div className={`text-xs mt-1 ${preferredLang === 'java' ? 'text-amber-100' : 'text-slate-400'}`}>
+                    OpenJDK 17+
+                  </div>
+                </div>
+                <span className="text-xl">☕</span>
+              </button>
+            </div>
+          </div>
 
           {/* TIMER DURATION CONFIGURATION */}
           <div className="space-y-3">

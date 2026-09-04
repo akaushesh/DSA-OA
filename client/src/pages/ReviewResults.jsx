@@ -17,8 +17,52 @@ export default function ReviewResults() {
   const [loading, setLoading] = useState(true);
   const [selectedSection, setSelectedSection] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('all'); // 'all' | 'correct' | 'incorrect' | 'skipped'
-  const [expandedCodeSubId, setExpandedCodeSubId] = useState(null);
+  const [expandedSubMap, setExpandedSubMap] = useState({}); // { [subId]: 'tests' | 'code' | null }
+  const [showProblemTCMap, setShowProblemTCMap] = useState({}); // { [problemId]: boolean }
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  // Helper to extract full test case comparisons (visible & hidden) for a submission
+  const getSubmissionTestDetails = (sub, problem) => {
+    const problemTCs = problem?.testCases || [];
+    const testResults = sub?.testResults || [];
+
+    if (testResults.length > 0) {
+      return testResults.map((tr, idx) => {
+        const originalTC = problemTCs[tr.testCaseIndex !== undefined ? tr.testCaseIndex : idx] || problemTCs[idx];
+        const isHidden = tr.isHidden !== undefined ? tr.isHidden : (originalTC?.isHidden || false);
+        const input = originalTC?.input || '';
+        const expectedOutput = originalTC?.expectedOutput || '';
+        const actualOutput = tr.stdout !== null && tr.stdout !== undefined && tr.stdout !== ''
+          ? tr.stdout
+          : (tr.passed && expectedOutput ? expectedOutput : '<no output produced>');
+
+        return {
+          index: idx + 1,
+          isHidden,
+          passed: !!tr.passed,
+          input,
+          expectedOutput,
+          actualOutput,
+          stderr: tr.stderr,
+          time: tr.time,
+        };
+      });
+    }
+
+    return problemTCs.map((tc, idx) => {
+      const isPassed = (sub?.passedTests || 0) > idx;
+      return {
+        index: idx + 1,
+        isHidden: !!tc.isHidden,
+        passed: isPassed,
+        input: tc.input || '',
+        expectedOutput: tc.expectedOutput || '',
+        actualOutput: isPassed ? (tc.expectedOutput || '<passed>') : '<no output recorded>',
+        stderr: null,
+        time: null,
+      };
+    });
+  };
 
   // Export Modal State
   const [showExportModal, setShowExportModal] = useState(false);
@@ -198,6 +242,8 @@ export default function ReviewResults() {
           difficulty: p.difficulty,
           topic: item.section,
           description: p.description,
+          inputFormat: p.inputFormat || null,
+          outputFormat: p.outputFormat || null,
           constraints: p.constraints,
           examples: p.examples,
           status: item.status,
@@ -221,6 +267,16 @@ export default function ReviewResults() {
             submittedAt: sub.submittedAt,
             compileError: sub.compileError || null,
             submittedCode: sub.code,
+            testCases: getSubmissionTestDetails(sub, p).map(td => ({
+              caseNumber: td.index,
+              type: td.isHidden ? 'Hidden' : 'Visible',
+              status: td.passed ? 'PASSED' : 'FAILED',
+              input: td.input,
+              expectedOutput: td.expectedOutput,
+              actualOutput: td.actualOutput,
+              error: td.stderr || null,
+              runtimeMs: td.time,
+            })),
           })),
         };
       }),
@@ -598,6 +654,22 @@ export default function ReviewResults() {
                         {p.description}
                       </p>
                     )}
+                    {p.inputFormat && (
+                      <div className="mt-2.5">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Input Format:</span>
+                        <pre className="text-slate-200 text-xs font-mono whitespace-pre-wrap bg-[#0c1426] border border-[#1b2744] p-3 rounded-xl leading-relaxed overflow-x-auto">
+                          {p.inputFormat}
+                        </pre>
+                      </div>
+                    )}
+                    {p.constraints && (
+                      <div className="mt-2.5">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Constraints:</span>
+                        <pre className="text-slate-200 text-xs font-mono whitespace-pre-wrap bg-[#0c1426] border border-[#1b2744] p-3 rounded-xl leading-relaxed overflow-x-auto">
+                          {p.constraints}
+                        </pre>
+                      </div>
+                    )}
                   </div>
 
                   {hasOptions && (
@@ -636,7 +708,7 @@ export default function ReviewResults() {
                           Test Case Results ({passedTC}/{totalTC} Passed)
                         </span>
 
-                        <div className="flex items-center gap-3 font-mono">
+                        <div className="flex items-center gap-3 font-mono flex-wrap">
                           <span className="text-slate-400">
                             Visible: <strong className="text-emerald-400">{visibleTC.length} Passed</strong>
                           </span>
@@ -650,8 +722,58 @@ export default function ReviewResults() {
                               <strong className="text-emerald-400">{hiddenTC.length} Passed</strong>
                             )}
                           </span>
+
+                          {p.testCases?.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setShowProblemTCMap(prev => ({ ...prev, [p._id]: !prev[p._id] }))}
+                              className="bg-[#18223a] hover:bg-[#202d4d] border border-[#2a3656] text-sky-400 hover:text-white font-sans font-bold px-2.5 py-1 rounded-lg transition text-[11px]"
+                            >
+                              {showProblemTCMap[p._id] ? '▲ Hide All Problem Cases' : `🔍 View All ${p.testCases.length} Problem Cases (Visible & Hidden)`}
+                            </button>
+                          )}
                         </div>
                       </div>
+
+                      {/* Expandable Problem Test Cases List (Visible & Hidden) */}
+                      {showProblemTCMap[p._id] && p.testCases?.length > 0 && (
+                        <div className="pt-3 border-t border-[#1e2a47] space-y-3">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                            Full Problem Test Suite ({p.testCases.length} Cases)
+                          </p>
+                          <div className="space-y-2.5">
+                            {p.testCases.map((tc, tcI) => (
+                              <div
+                                key={tcI}
+                                className="bg-[#050811] border border-[#1b2744] p-3 rounded-xl space-y-2 text-xs font-mono"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-sky-400">
+                                    Problem Test Case #{tcI + 1}
+                                  </span>
+                                  <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+                                    tc.isHidden
+                                      ? 'bg-purple-950/70 text-purple-300 border border-purple-800'
+                                      : 'bg-blue-950/70 text-sky-300 border border-sky-800'
+                                  }`}>
+                                    {tc.isHidden ? '🔒 Hidden Case' : '👁 Visible Case'}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  <div className="bg-[#0b1020] border border-[#18233c] p-2.5 rounded-lg">
+                                    <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
+                                    <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.input || '<empty input>'}</pre>
+                                  </div>
+                                  <div className="bg-[#0b1020] border border-[#18233c] p-2.5 rounded-lg">
+                                    <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Expected Output:</span>
+                                    <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.expectedOutput || '<empty output>'}</pre>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -670,8 +792,10 @@ export default function ReviewResults() {
                         {Array.from({ length: totalTC }).map((_, tcIdx) => {
                           const diffRules = getDifficultyPoints(p.difficulty);
                           const tcPts = diffRules.tcPoints?.[tcIdx] || Math.round(item.maxPossiblePoints / totalTC);
-                          const isPassedInBest = (item.bestSub?.passedTests || 0) > tcIdx;
-                          const isVisible = tcIdx === 0;
+                          const tcObj = p.testCases?.[tcIdx];
+                          const isVisible = tcObj ? !tcObj.isHidden : (tcIdx === 0);
+                          const bestTestResult = item.bestSub?.testResults?.[tcIdx];
+                          const isPassedInBest = bestTestResult ? bestTestResult.passed : (item.bestSub?.passedTests || 0) > tcIdx;
 
                           return (
                             <div
@@ -714,7 +838,7 @@ export default function ReviewResults() {
                   )}
 
                   <div className="pt-2 border-t border-[#1e2a47]/60">
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                         All Submissions Made While Attempting ({subs.length})
                       </span>
@@ -731,22 +855,23 @@ export default function ReviewResults() {
                         No submissions recorded for this question.
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {subs.map((sub, sIdx) => {
-                          const isCodeExpanded = expandedCodeSubId === sub._id;
+                          const activeView = expandedSubMap[sub._id];
                           const subScore = sub.score !== undefined && sub.score !== null
                             ? sub.score
                             : calculateProblemScore(p.difficulty, sub.passedTests, sub.totalTests);
                           const isBest = subScore === item.maxScore && subScore > 0;
+                          const testDetails = getSubmissionTestDetails(sub, p);
 
                           return (
                             <div
                               key={sub._id || sIdx}
-                              className="bg-[#080d1a] border border-[#1e2a47] rounded-xl p-3.5 space-y-2.5"
+                              className="bg-[#080d1a] border border-[#1e2a47] rounded-xl p-3.5 space-y-3"
                             >
-                              <div className="flex items-center justify-between text-xs font-mono">
-                                <div className="flex items-center gap-3">
-                                  <span className="text-slate-500 font-bold">#{sIdx + 1}</span>
+                              <div className="flex items-center justify-between text-xs font-mono flex-wrap gap-2">
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                  <span className="text-slate-500 font-bold">Attempt #{sIdx + 1}</span>
                                   <VerdictBadge verdict={sub.verdict} />
                                   <span className="text-slate-200 font-bold uppercase">{sub.language}</span>
                                   <span className="text-slate-500">·</span>
@@ -755,24 +880,129 @@ export default function ReviewResults() {
                                   <span className="text-amber-300 font-bold">{subScore} pts</span>
                                   {isBest && (
                                     <span className="text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-md">
-                                      ★ Best Score (Counted)
+                                      ★ Best Score
                                     </span>
                                   )}
                                 </div>
 
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
                                   {sub.runtime && <span className="text-slate-400">⏱ {sub.runtime}ms</span>}
                                   <span className="text-slate-500">{new Date(sub.submittedAt).toLocaleTimeString()}</span>
                                   <button
-                                    onClick={() => setExpandedCodeSubId(isCodeExpanded ? null : sub._id)}
-                                    className="bg-[#18223a] hover:bg-[#202d4d] border border-[#2a3656] text-sky-400 hover:text-white font-sans font-bold px-2.5 py-1 rounded-lg transition"
+                                    type="button"
+                                    onClick={() => setExpandedSubMap(prev => ({
+                                      ...prev,
+                                      [sub._id]: prev[sub._id] === 'tests' ? null : 'tests',
+                                    }))}
+                                    className={`font-sans font-bold px-2.5 py-1 rounded-lg text-xs transition border ${
+                                      activeView === 'tests'
+                                        ? 'bg-sky-600 text-white border-sky-500'
+                                        : 'bg-[#18223a] hover:bg-[#202d4d] border-[#2a3656] text-sky-400 hover:text-white'
+                                    }`}
                                   >
-                                    {isCodeExpanded ? '▲ Hide Code' : '🔍 View Code'}
+                                    🧪 Test Results ({sub.passedTests}/{sub.totalTests})
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedSubMap(prev => ({
+                                      ...prev,
+                                      [sub._id]: prev[sub._id] === 'code' ? null : 'code',
+                                    }))}
+                                    className={`font-sans font-bold px-2.5 py-1 rounded-lg text-xs transition border ${
+                                      activeView === 'code'
+                                        ? 'bg-purple-600 text-white border-purple-500'
+                                        : 'bg-[#18223a] hover:bg-[#202d4d] border-[#2a3656] text-slate-300 hover:text-white'
+                                    }`}
+                                  >
+                                    {activeView === 'code' ? '▲ Hide Code' : '🔍 View Code'}
                                   </button>
                                 </div>
                               </div>
 
-                              {isCodeExpanded && (
+                              {/* TEST RESULTS FOR THIS ATTEMPT (VISIBLE & HIDDEN WITH ANSWERS) */}
+                              {activeView === 'tests' && (
+                                <div className="pt-3 border-t border-[#1e2a47] space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                                      Attempt #{sIdx + 1} Test Case Breakdown & Answers
+                                    </span>
+                                    <span className="text-[11px] text-slate-400 font-mono">
+                                      {sub.verdict === 'AC' ? '✅ All Cases Passed' : '⚠️ Inspect Answers Below'}
+                                    </span>
+                                  </div>
+
+                                  {sub.compileError ? (
+                                    <div className="p-3.5 bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs font-mono rounded-xl space-y-1">
+                                      <span className="font-bold text-rose-400 block">Compilation / Diagnostics Error:</span>
+                                      <pre className="whitespace-pre-wrap overflow-x-auto">{sub.compileError}</pre>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-3">
+                                      {testDetails.map((td) => (
+                                        <div
+                                          key={td.index}
+                                          className={`p-3.5 rounded-xl border text-xs space-y-2.5 transition ${
+                                            td.passed
+                                              ? 'bg-emerald-950/20 border-emerald-800/60 text-emerald-300'
+                                              : 'bg-rose-950/20 border-rose-800/60 text-rose-300'
+                                          }`}
+                                        >
+                                          <div className="flex items-center justify-between font-bold flex-wrap gap-1.5">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <span>{td.passed ? '✓' : '✗'}</span>
+                                              <span>Test Case #{td.index}</span>
+                                              <span className={`text-[10px] px-2 py-0.5 rounded border uppercase ${
+                                                td.isHidden
+                                                  ? 'bg-purple-950/60 border-purple-700 text-purple-300'
+                                                  : 'bg-blue-950/60 border-blue-700 text-sky-300'
+                                              }`}>
+                                                {td.isHidden ? '🔒 Hidden Case' : '👁 Visible Case'}
+                                              </span>
+                                              <span className={`text-[10px] px-2 py-0.5 rounded border font-mono ${
+                                                td.passed
+                                                  ? 'bg-emerald-900/40 border-emerald-700 text-emerald-300'
+                                                  : 'bg-rose-900/40 border-rose-700 text-rose-300'
+                                              }`}>
+                                                {td.passed ? 'PASSED' : 'WRONG ANSWER'}
+                                              </span>
+                                            </div>
+                                            {td.time && <span className="font-mono text-slate-400 text-[11px]">{td.time}ms</span>}
+                                          </div>
+
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-xs">
+                                            <div className="bg-[#050811] border border-[#18233c] p-2.5 rounded-lg">
+                                              <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
+                                              <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{td.input || '<empty input>'}</pre>
+                                            </div>
+                                            <div className="bg-[#050811] border border-[#18233c] p-2.5 rounded-lg">
+                                              <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Expected Output:</span>
+                                              <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{td.expectedOutput || '<empty output>'}</pre>
+                                            </div>
+                                          </div>
+
+                                          <div className="bg-[#050811] border border-[#18233c] p-2.5 rounded-lg font-mono text-xs">
+                                            <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Answer Given in this Attempt:</span>
+                                            <pre className={`whitespace-pre-wrap font-mono text-xs overflow-x-auto ${
+                                              td.passed ? 'text-emerald-300 font-bold' : 'text-rose-400 font-bold'
+                                            }`}>
+                                              {td.actualOutput}
+                                            </pre>
+                                          </div>
+
+                                          {td.stderr && (
+                                            <pre className="text-xs font-mono text-rose-400 bg-rose-950/40 p-2.5 rounded-lg border border-rose-800/40 whitespace-pre-wrap overflow-x-auto">
+                                              {td.stderr}
+                                            </pre>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* CODE VIEW FOR THIS ATTEMPT */}
+                              {activeView === 'code' && (
                                 <div className="pt-2 border-t border-[#1e2a47] space-y-2">
                                   <pre className="p-4 bg-[#050811] border border-[#1b2744] text-emerald-300 font-mono text-xs rounded-xl overflow-x-auto leading-relaxed max-h-72">
                                     {sub.code}
@@ -781,7 +1011,7 @@ export default function ReviewResults() {
                                   {sub.compileError && (
                                     <div className="p-3 bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs font-mono rounded-xl">
                                       <span className="font-bold text-rose-400 block mb-1">Compiler Error:</span>
-                                      {sub.compileError}
+                                      <pre className="whitespace-pre-wrap overflow-x-auto">{sub.compileError}</pre>
                                     </div>
                                   )}
                                 </div>

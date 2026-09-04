@@ -10,6 +10,8 @@ const SAMPLE_DSA_JSON = [
     "difficulty": "Medium",
     "category": "Graphs",
     "description": "Given an m x n 2D binary grid grid which represents a map of '1's (land) and '0's (water), return the number of islands.\n\nAn island is surrounded by water and is formed by connecting adjacent lands horizontally or vertically. You may assume all four edges of the grid are all surrounded by water.",
+    "inputFormat": "First line contains two space-separated integers m and n.\nNext m lines each contain n space-separated characters ('0' or '1').",
+    "outputFormat": "Print a single integer representing the total number of islands.",
     "constraints": "1 <= m, n <= 300\ngrid[i][j] is '0' or '1'",
     "starterCode": {
       "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // Boilerplate for Number of Islands\n    return 0;\n}",
@@ -34,6 +36,8 @@ const SAMPLE_DSA_JSON = [
     "difficulty": "Easy",
     "category": "Arrays",
     "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.",
+    "inputFormat": "First line contains two space-separated integers n and target.\nSecond line contains n space-separated integers representing array nums.",
+    "outputFormat": "Print two space-separated indices.",
     "constraints": "2 <= nums.length <= 10^4\n-10^9 <= nums[i] <= 10^9\n-10^9 <= target <= 10^9",
     "examples": [
       {
@@ -54,6 +58,8 @@ const SAMPLE_DSA_JSON = [
     "difficulty": "Medium",
     "category": "Dynamic Programming",
     "description": "You are given an integer array coins representing coins of different denominations and an integer amount representing a total amount of money.\n\nReturn the fewest number of coins that you need to make up that amount. If that amount of money cannot be made up by any combination of the coins, return -1.",
+    "inputFormat": "First line contains two space-separated integers n and amount.\nSecond line contains n space-separated integers representing the coins array.",
+    "outputFormat": "Print a single integer representing the fewest coins needed, or -1 if not possible.",
     "constraints": "1 <= coins.length <= 12\n1 <= coins[i] <= 2^31 - 1\n0 <= amount <= 10^4",
     "examples": [
       {
@@ -104,6 +110,8 @@ export default function QuestionSetEditor() {
                 difficulty: p.difficulty,
                 category: p.category || s.category || 'General',
                 description: p.description,
+                inputFormat: p.inputFormat || p.input_format || '',
+                outputFormat: p.outputFormat || p.output_format || '',
                 constraints: p.constraints || '',
                 examples: p.examples || [],
                 timeLimit: p.timeLimit || s.totalTimeLimit || 900,
@@ -233,6 +241,8 @@ export default function QuestionSetEditor() {
           description: p.description || p.questionText || '',
           difficulty: p.difficulty || 'Medium',
           category: p.category || p.section || category || 'General',
+          inputFormat: p.inputFormat || p.input_format || '',
+          outputFormat: p.outputFormat || p.output_format || '',
           constraints: p.constraints || '',
           starterCode: p.starterCode || undefined,
           timeLimit: p.timeLimit || timerMinutes * 60,
@@ -609,6 +619,14 @@ export default function QuestionSetEditor() {
                     {q.description && q.description !== qTitle && (
                       <div className="text-slate-300 text-xs leading-relaxed mb-3 whitespace-pre-wrap max-h-40 overflow-y-auto bg-[#0c1426] p-3 rounded-lg border border-[#1b2744] scrollbar-thin scrollbar-thumb-slate-700">
                         {q.description}
+                      </div>
+                    )}
+
+                    {/* Input Format preview if present */}
+                    {q.inputFormat && (
+                      <div className="text-slate-300 text-xs mb-3 bg-[#0c1426] p-2.5 rounded-lg border border-[#1b2744]">
+                        <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider block mb-1">Input Format:</span>
+                        <pre className="text-slate-200 font-mono text-[11px] whitespace-pre-wrap">{q.inputFormat}</pre>
                       </div>
                     )}
 

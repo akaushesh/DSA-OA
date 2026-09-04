@@ -7,6 +7,7 @@ const attemptSchema = new Schema({
   endedAt: Date,
   timingMode: { type: String, enum: ['per_problem', 'collective'] },
   totalTimeLimit: Number,  // copied from set at start
+  preferredLanguage: { type: String, enum: ['cpp', 'java'], default: 'cpp' },
   submissions: [{ type: Schema.Types.ObjectId, ref: 'Submission' }],
   score: { type: Number, default: 0 },
   maxPossibleScore: { type: Number, default: 0 },

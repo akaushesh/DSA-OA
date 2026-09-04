@@ -18,6 +18,8 @@ const problemSchema = new Schema({
   difficulty: { type: String, enum: ['Easy', 'Medium', 'Hard'], default: 'Medium' },
   category: { type: String, default: 'General', index: true },
   tags: [String],
+  inputFormat: String,
+  outputFormat: String,
   constraints: String,
   examples: [exampleSchema],
   starterCode: {
