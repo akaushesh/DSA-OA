@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import toast from 'react-hot-toast';
 import { getProblem } from '../api/problems';
@@ -18,7 +18,12 @@ const STARTERS = {
 
 export default function CodingArena() {
   const { attemptId, problemId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  // ponytail: practice mode activates when no attemptId is in the URL or attemptId is 'practice'
+  const fromAttemptId = searchParams.get('fromAttempt');
+  const isPractice = !attemptId || attemptId === 'practice';
 
   const [problem, setProblem] = useState(null);
   const [questionSet, setQuestionSet] = useState(null);
@@ -28,13 +33,15 @@ export default function CodingArena() {
   // Editor & Submission State
   const [lang, setLang] = useState(() => {
     try {
-      const attemptLang = sessionStorage.getItem(`attempt_lang_${attemptId}`);
-      if (attemptLang === 'cpp' || attemptLang === 'java') return attemptLang;
-      const configStr = sessionStorage.getItem(`attempt_config_${attemptId}`);
-      if (configStr) {
-        const config = JSON.parse(configStr);
-        if (config.preferredLanguage === 'cpp' || config.preferredLanguage === 'java') {
-          return config.preferredLanguage;
+      if (!isPractice && attemptId) {
+        const attemptLang = sessionStorage.getItem(`attempt_lang_${attemptId}`);
+        if (attemptLang === 'cpp' || attemptLang === 'java') return attemptLang;
+        const configStr = sessionStorage.getItem(`attempt_config_${attemptId}`);
+        if (configStr) {
+          const config = JSON.parse(configStr);
+          if (config.preferredLanguage === 'cpp' || config.preferredLanguage === 'java') {
+            return config.preferredLanguage;
+          }
         }
       }
       const userPref = localStorage.getItem('preferredLanguage');
@@ -115,16 +122,20 @@ export default function CodingArena() {
 
   // Load Attempt and Question Set metadata
   useEffect(() => {
+    if (isPractice) {
+      // ponytail: in practice mode, isolate only this question without loading the entire assessment
+      setQuestionSet(null);
+      setAllProblems([]);
+      return;
+    }
+
     getAttempt(attemptId)
       .then(r => {
         const att = r.data.statusCode?.attempt;
         if (att && att.status !== 'in_progress') {
-          toast.error(
-            att.status === 'stopped_by_admin' || att.stoppedByAdmin
-              ? '🛑 This assessment was stopped by an administrator.'
-              : 'This assessment has already ended.'
-          );
-          navigate(`/review/${attemptId}`, { replace: true });
+          // ponytail: seamless redirect to practice mode so review users never encounter a dead end
+          toast('Assessment ended — opened in Practice Mode 💡', { icon: '💡' });
+          navigate(`/practice/${problemId}?fromAttempt=${attemptId}`, { replace: true });
           return;
         }
 
@@ -194,12 +205,11 @@ export default function CodingArena() {
         setAnsweredProblems(ansMap);
       })
       .catch(console.error);
-  }, [attemptId, navigate]);
+  }, [isPractice, attemptId, fromAttemptId, problemId, navigate]);
 
-  // Real-time heartbeat: if an admin stops or terminates the test from the admin panel while the user is active,
-  // immediately notify the student, lock the arena, and navigate to review
+  // Real-time heartbeat: if an admin stops or terminates the test from the admin panel while the user is active
   useEffect(() => {
-    if (!attemptId) return;
+    if (isPractice || !attemptId) return;
     const interval = setInterval(async () => {
       try {
         const res = await getAttempt(attemptId);
@@ -217,29 +227,35 @@ export default function CodingArena() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [attemptId, navigate]);
+  }, [isPractice, attemptId, navigate]);
 
-  // Code Draft Persistence (Auto-saves user code per problem in current attempt)
+  // Code Draft Persistence (Auto-saves user code per problem in current attempt / practice)
+  const getDraftKey = useCallback((pId, currentLang) => {
+    return isPractice ? `draft_practice_${pId}_${currentLang}` : `draft_${attemptId}_${pId}_${currentLang}`;
+  }, [isPractice, attemptId]);
+
   const getDraftCode = useCallback((pId, currentLang) => {
     try {
-      return sessionStorage.getItem(`draft_${attemptId}_${pId}_${currentLang}`);
+      return sessionStorage.getItem(getDraftKey(pId, currentLang));
     } catch {
       return null;
     }
-  }, [attemptId]);
+  }, [getDraftKey]);
 
   const saveDraftCode = useCallback((pId, currentLang, val) => {
     try {
       if (val !== undefined && val !== null) {
-        sessionStorage.setItem(`draft_${attemptId}_${pId}_${currentLang}`, val);
+        sessionStorage.setItem(getDraftKey(pId, currentLang), val);
       }
     } catch {}
-  }, [attemptId]);
+  }, [getDraftKey]);
 
-  // Load Problem Data & Current Attempt Submissions for THIS problem
+  // Load Problem Data & Submissions for THIS problem
   const loadSubmissions = useCallback(async () => {
     try {
-      const res = await mySubmissions({ problemId, attemptId });
+      const params = { problemId };
+      if (!isPractice && attemptId) params.attemptId = attemptId;
+      const res = await mySubmissions(params);
       const subs = res.data.statusCode?.submissions || [];
       setSubmissionsList(subs);
       
@@ -262,7 +278,7 @@ export default function CodingArena() {
     } catch (err) {
       console.error(err);
     }
-  }, [problemId, attemptId, lang, getDraftCode]);
+  }, [problemId, isPractice, attemptId, lang, getDraftCode]);
 
   useEffect(() => {
     setActiveTab('problem');
@@ -328,7 +344,9 @@ export default function CodingArena() {
   const changeLang = (newLang) => {
     setLang(newLang);
     try {
-      sessionStorage.setItem(`attempt_lang_${attemptId}`, newLang);
+      if (!isPractice && attemptId) {
+        sessionStorage.setItem(`attempt_lang_${attemptId}`, newLang);
+      }
       localStorage.setItem('preferredLanguage', newLang);
     } catch {}
     const customStarter = problem?.starterCode?.[newLang];
@@ -415,13 +433,16 @@ export default function CodingArena() {
     setSubmitting(true);
     setSubmission(null);
     try {
-      const res = await submitCode({
+      const payload = {
         problemId,
-        questionSetId: attempt?.questionSetId?._id || attempt?.questionSetId,
-        attemptId,
         language: lang,
         code,
-      });
+      };
+      if (!isPractice) {
+        if (attempt?.questionSetId) payload.questionSetId = attempt.questionSetId._id || attempt.questionSetId;
+        if (attemptId) payload.attemptId = attemptId;
+      }
+      const res = await submitCode(payload);
       const subId = res.data.statusCode?.submissionId;
       pollSubmission(subId);
     } catch (err) {
@@ -430,7 +451,7 @@ export default function CodingArena() {
     } finally {
       setSubmitting(false);
     }
-  }, [code, problemId, attempt, attemptId, lang, pollSubmission]);
+  }, [code, problemId, isPractice, attempt, attemptId, lang, pollSubmission]);
 
   // Keyboard Shortcuts: Cmd + Enter OR Cmd + ' -> Run Code & Switch to Test Results
   useEffect(() => {
@@ -446,7 +467,7 @@ export default function CodingArena() {
 
   // Per-problem tick: active problem's timer counts down and immediately syncs to localStorage
   useEffect(() => {
-    if (attempt?.timingMode !== 'per_problem' || !problemId || !problem) return;
+    if (isPractice || attempt?.timingMode !== 'per_problem' || !problemId || !problem) return;
     const remaining = problemTimers[problemId] ?? (problem.timeLimit || 1800);
     if (remaining <= 0) return;
 
@@ -471,11 +492,11 @@ export default function CodingArena() {
     }, 1000);
 
     return () => clearTimeout(t);
-  }, [problemTimers, problemId, attempt, problem, attemptId]);
+  }, [isPractice, problemTimers, problemId, attempt, problem, attemptId]);
 
   // Flush current elapsed to server before navigating or reloading
   const flushTimers = useCallback(async () => {
-    if (attempt?.timingMode !== 'per_problem') return;
+    if (isPractice || attempt?.timingMode !== 'per_problem') return;
     const elapsed = Object.fromEntries(
       allProblems.map(p => {
         const pId = (p._id || p).toString();
@@ -487,11 +508,11 @@ export default function CodingArena() {
       localStorage.setItem(`oa_all_elapsed_${attemptId}`, JSON.stringify(elapsed));
     } catch (e) {}
     await saveTimers(attemptId, { problemTimerElapsedSec: elapsed }).catch(() => {});
-  }, [attempt, allProblems, problemTimers, attemptId]);
+  }, [isPractice, attempt, allProblems, problemTimers, attemptId]);
 
   // Periodic background sync of elapsed timers to MongoDB every 4 seconds
   useEffect(() => {
-    if (attempt?.timingMode !== 'per_problem' || !allProblems.length) return;
+    if (isPractice || attempt?.timingMode !== 'per_problem' || !allProblems.length) return;
     const interval = setInterval(() => {
       const elapsed = Object.fromEntries(
         allProblems.map(p => {
@@ -504,12 +525,12 @@ export default function CodingArena() {
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [attempt, allProblems, problemTimers, attemptId]);
+  }, [isPractice, attempt, allProblems, problemTimers, attemptId]);
 
   // Save timers on tab unload / reload using sendBeacon / keepalive fetch
   useEffect(() => {
     const handleUnload = () => {
-      if (attempt?.timingMode !== 'per_problem' || !allProblems.length) return;
+      if (isPractice || attempt?.timingMode !== 'per_problem' || !allProblems.length) return;
       const elapsed = Object.fromEntries(
         allProblems.map(p => {
           const pId = (p._id || p).toString();
@@ -539,22 +560,22 @@ export default function CodingArena() {
       window.removeEventListener('beforeunload', handleUnload);
       window.removeEventListener('pagehide', handleUnload);
     };
-  }, [attempt, allProblems, problemTimers, attemptId]);
+  }, [isPractice, attempt, allProblems, problemTimers, attemptId]);
 
-  const isCurrentLocked = attempt?.timingMode === 'per_problem' && (problemTimers[problemId] ?? 1) <= 0;
-  const allExpired = attempt?.timingMode === 'per_problem' && allProblems.length > 0 &&
+  const isCurrentLocked = !isPractice && attempt?.timingMode === 'per_problem' && (problemTimers[problemId] ?? 1) <= 0;
+  const allExpired = !isPractice && attempt?.timingMode === 'per_problem' && allProblems.length > 0 &&
     allProblems.every(p => (problemTimers[p._id || p] ?? 1) <= 0);
 
   const [problemLockedModal, setProblemLockedModal] = useState(false);
 
   useEffect(() => {
-    if (attempt?.timingMode !== 'per_problem') return;
+    if (isPractice || attempt?.timingMode !== 'per_problem') return;
     if (isCurrentLocked && !allExpired) {
       setProblemLockedModal(true);
     } else {
       setProblemLockedModal(false);
     }
-  }, [isCurrentLocked, allExpired, attempt?.timingMode, problemId]);
+  }, [isPractice, isCurrentLocked, allExpired, attempt?.timingMode, problemId]);
 
   const handleLockedProceed = async () => {
     setProblemLockedModal(false);
@@ -582,20 +603,38 @@ export default function CodingArena() {
   };
 
   const handleNextProblem = async () => {
-    await flushTimers();
-    if (currentIndex < allProblems.length - 1) {
+    if (!isPractice) await flushTimers();
+    if (currentIndex >= 0 && currentIndex < allProblems.length - 1) {
       const nextP = allProblems[currentIndex + 1];
-      navigate(`/attempt/${attemptId}/problem/${nextP._id || nextP}`);
+      const nextId = nextP._id || nextP;
+      if (isPractice) {
+        navigate(`/practice/${nextId}${fromAttemptId ? `?fromAttempt=${fromAttemptId}` : ''}`);
+      } else {
+        navigate(`/attempt/${attemptId}/problem/${nextId}`);
+      }
     } else {
-      handleEndAttempt();
+      if (isPractice) {
+        if (fromAttemptId) {
+          navigate(`/review/${fromAttemptId}`);
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        handleEndAttempt();
+      }
     }
   };
 
   const handlePrevProblem = async () => {
-    await flushTimers();
+    if (!isPractice) await flushTimers();
     if (currentIndex > 0) {
       const prevP = allProblems[currentIndex - 1];
-      navigate(`/attempt/${attemptId}/problem/${prevP._id || prevP}`);
+      const prevId = prevP._id || prevP;
+      if (isPractice) {
+        navigate(`/practice/${prevId}${fromAttemptId ? `?fromAttempt=${fromAttemptId}` : ''}`);
+      } else {
+        navigate(`/attempt/${attemptId}/problem/${prevId}`);
+      }
     }
   };
 
@@ -610,7 +649,7 @@ export default function CodingArena() {
   const [collectiveSeconds, setCollectiveSeconds] = useState(null);
 
   useEffect(() => {
-    if (attempt?.timingMode === 'per_problem' || !attempt) return;
+    if (isPractice || attempt?.timingMode === 'per_problem' || !attempt) return;
     const limit = attempt.totalTimeLimit || questionSet?.totalTimeLimit || 3600;
     const started = attempt.startedAt ? new Date(attempt.startedAt).getTime() : Date.now();
 
@@ -631,7 +670,7 @@ export default function CodingArena() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [attempt, questionSet]);
+  }, [isPractice, attempt, questionSet]);
 
   if (!problem) {
     return (
@@ -652,32 +691,52 @@ export default function CodingArena() {
         
         {/* Left: Sidebar Toggle, Test Name & Section Breadcrumb */}
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(prev => !prev)}
-            title={sidebarOpen ? "Hide sidebar (give more space to code)" : "Show question list"}
-            className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition ${
-              sidebarOpen
-                ? 'bg-[#18223a] border-[#243352] text-slate-300 hover:text-white hover:border-slate-500'
-                : 'bg-purple-950/80 border-purple-600 text-purple-200 shadow-md shadow-purple-950/50 hover:bg-purple-900'
-            }`}
-          >
-            <span>{sidebarOpen ? '◧' : '◨'}</span>
-            <span className="hidden sm:inline">{sidebarOpen ? 'Hide Sidebar' : 'Show Questions'}</span>
-          </button>
+          {!isPractice && allProblems.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(prev => !prev)}
+              title={sidebarOpen ? "Hide sidebar (give more space to code)" : "Show question list"}
+              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition ${
+                sidebarOpen
+                  ? 'bg-[#18223a] border-[#243352] text-slate-300 hover:text-white hover:border-slate-500'
+                  : 'bg-purple-950/80 border-purple-600 text-purple-200 shadow-md shadow-purple-950/50 hover:bg-purple-900'
+              }`}
+            >
+              <span>{sidebarOpen ? '◧' : '◨'}</span>
+              <span className="hidden sm:inline">{sidebarOpen ? 'Hide Sidebar' : 'Show Questions'}</span>
+            </button>
+          )}
           <div>
-            <h1 className="text-white text-sm font-extrabold tracking-tight">
-              {questionSet?.name || 'Assessment Test'}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-white text-sm font-extrabold tracking-tight">
+                {isPractice
+                  ? (problem?.title || 'Practice Coding Editor')
+                  : (questionSet?.name || 'Assessment Test')}
+              </h1>
+              {isPractice && (
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                  Practice Mode
+                </span>
+              )}
+            </div>
             <p className="text-[10px] text-sky-400 font-bold uppercase tracking-wider">
-              QUESTION {currentQNum} OF {allProblems.length || 1}
+              {isPractice
+                ? (problem?.category ? `${problem.category} · Single Question Practice` : 'Single Question Practice')
+                : `QUESTION ${currentQNum} OF ${allProblems.length || 1}`}
             </p>
           </div>
         </div>
 
         {/* Center: PROMINENT LIVE TIMER PILL + MARK FOR REVIEW */}
         <div className="flex items-center justify-center gap-3">
-          {attempt?.timingMode === 'per_problem' ? (() => {
+          {isPractice ? (
+            <div className="border border-emerald-500/50 bg-[#080d1a] shadow-lg shadow-emerald-950/40 px-5 py-1.5 rounded-full flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-mono font-bold text-xs sm:text-sm tracking-wider text-emerald-300">
+                Practice Mode · Untimed
+              </span>
+            </div>
+          ) : attempt?.timingMode === 'per_problem' ? (() => {
             const secs = problemTimers[problemId] ?? 0;
             const locked = secs <= 0;
             const isLow = secs > 0 && secs < 60;
@@ -774,12 +833,14 @@ export default function CodingArena() {
             </div>
           )}
 
-          <button
-            onClick={handleEndAttempt}
-            className="text-xs bg-red-950/70 hover:bg-red-900 border border-red-800 text-red-200 font-bold px-4 py-1.5 rounded-xl transition shadow"
-          >
-            Submit Test
-          </button>
+          {!isPractice && (
+            <button
+              onClick={handleEndAttempt}
+              className="text-xs bg-red-950/70 hover:bg-red-900 border border-red-800 text-red-200 font-bold px-4 py-1.5 rounded-xl transition shadow"
+            >
+              Submit Test
+            </button>
+          )}
         </div>
 
       </div>
@@ -788,7 +849,7 @@ export default function CodingArena() {
       <div className="flex flex-1 overflow-hidden relative">
         
         {/* LEFT SIDEBAR: SECTION LIST & QUESTION MAP */}
-        {sidebarOpen && (
+        {!isPractice && sidebarOpen && (
           <div className="w-64 bg-[#0d1527] border-r border-[#1f2c4b] flex flex-col justify-between overflow-hidden flex-shrink-0 z-20 shadow-2xl">
           
           <div className="p-4 overflow-y-auto space-y-6">
@@ -831,7 +892,7 @@ export default function CodingArena() {
                   const isActive = pId === problemId;
                   const isAns = !!answeredProblems[pId];
                   const isMrk = !!markedForReview[pId];
-                  const isLocked = attempt?.timingMode === 'per_problem' && (problemTimers[pId] ?? 1) <= 0;
+                  const isLocked = !isPractice && attempt?.timingMode === 'per_problem' && (problemTimers[pId] ?? 1) <= 0;
 
                   return (
                     <button
@@ -842,8 +903,12 @@ export default function CodingArena() {
                           toast.error(`Question ${idx + 1} time expired and is locked.`);
                           return;
                         }
-                        await flushTimers();
-                        navigate(`/attempt/${attemptId}/problem/${pId}`);
+                        if (!isPractice) await flushTimers();
+                        if (isPractice) {
+                          navigate(`/practice/${pId}${fromAttemptId ? `?fromAttempt=${fromAttemptId}` : ''}`);
+                        } else {
+                          navigate(`/attempt/${attemptId}/problem/${pId}`);
+                        }
                       }}
                       className={`w-9 h-9 rounded-xl text-xs font-bold transition flex items-center justify-center relative border ${
                         isActive
@@ -897,7 +962,11 @@ export default function CodingArena() {
               onClick={handleNextProblem}
               className="w-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-lg shadow-purple-950/50 flex items-center justify-center gap-1"
             >
-              {currentIndex < allProblems.length - 1 ? 'Save & Next →' : 'Submit Assessment →'}
+              {currentIndex >= 0 && currentIndex < allProblems.length - 1
+                ? 'Next Question →'
+                : isPractice
+                ? (fromAttemptId ? 'Return to Review →' : 'Done Practice →')
+                : 'Submit Assessment →'}
             </button>
           </div>
 
@@ -919,9 +988,15 @@ export default function CodingArena() {
             {/* Sub-Header Tabs */}
             <div className="flex items-center justify-between border-b border-[#1f2c4b] bg-[#11192e] px-4 py-2 flex-shrink-0 gap-2">
               <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar-hide">
-                <span className="bg-purple-950/80 border border-purple-700 text-purple-300 font-extrabold text-xs px-2.5 py-1 rounded-lg flex-shrink-0">
-                  Q{currentQNum} / {allProblems.length}
-                </span>
+                {isPractice ? (
+                  <span className="bg-emerald-950/80 border border-emerald-700 text-emerald-300 font-extrabold text-xs px-3 py-1 rounded-lg flex items-center gap-1.5 flex-shrink-0">
+                    <span>💻</span> Practice Problem
+                  </span>
+                ) : (
+                  <span className="bg-purple-950/80 border border-purple-700 text-purple-300 font-extrabold text-xs px-2.5 py-1 rounded-lg flex-shrink-0">
+                    Q{currentQNum} / {allProblems.length}
+                  </span>
+                )}
 
                 <button
                   onClick={() => { setActiveTab('problem'); setSelectedSubView(null); }}
@@ -1429,22 +1504,40 @@ export default function CodingArena() {
 
             {/* BOTTOM STEPPER NAV */}
             <div className="p-3.5 bg-[#11192e] border-t border-[#1f2c4b] flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={handlePrevProblem}
-                disabled={currentIndex === 0}
-                className="bg-[#18223a] hover:bg-[#202d4d] disabled:opacity-40 border border-[#2a3656] text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition"
-              >
-                ← Previous
-              </button>
+              {isPractice ? (
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-xs text-slate-400 font-mono">
+                    Single Question Practice · Test &amp; Refine Solution
+                  </span>
 
-              <button
-                type="button"
-                onClick={handleNextProblem}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition shadow flex items-center gap-1.5"
-              >
-                {currentIndex < allProblems.length - 1 ? 'Save & Next →' : 'Submit Assessment →'}
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => fromAttemptId ? navigate(`/review/${fromAttemptId}`) : navigate('/dashboard')}
+                    className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold px-5 py-2 rounded-xl text-xs transition shadow flex items-center gap-1.5"
+                  >
+                    <span>✓</span> {fromAttemptId ? 'Return to Review' : 'Exit Practice'}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrevProblem}
+                    disabled={currentIndex === 0}
+                    className="bg-[#18223a] hover:bg-[#202d4d] disabled:opacity-40 border border-[#2a3656] text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition"
+                  >
+                    ← Previous
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleNextProblem}
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition shadow flex items-center gap-1.5"
+                  >
+                    {currentIndex >= 0 && currentIndex < allProblems.length - 1 ? 'Save & Next →' : 'Submit Assessment →'}
+                  </button>
+                </>
+              )}
             </div>
 
           </div>

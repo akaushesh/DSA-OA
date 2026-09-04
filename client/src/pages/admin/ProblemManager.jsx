@@ -49,6 +49,13 @@ export default function ProblemManager() {
                 </div>
                 <div className="flex gap-2">
                   <Link
+                    to={`/practice/${p._id}`}
+                    className="text-xs text-emerald-400 border border-emerald-800 px-3 py-1 rounded hover:bg-emerald-900/30 flex items-center gap-1"
+                    title="Open problem in Practice Coding Editor"
+                  >
+                    <span>💻</span> Practice
+                  </Link>
+                  <Link
                     to={`/admin/problems/${p._id}/edit`}
                     className="text-xs text-blue-400 border border-blue-800 px-3 py-1 rounded hover:bg-blue-900/30"
                   >

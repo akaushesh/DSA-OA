@@ -628,7 +628,16 @@ export default function ReviewResults() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Link
+                        to={`/practice/${p._id}?fromAttempt=${attempt._id}`}
+                        className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white text-xs font-black px-4 py-2 rounded-xl transition-all shadow-lg shadow-blue-950/60 ring-2 ring-blue-400/50 flex items-center gap-2 hover:shadow-blue-500/30"
+                        title="Open this question in practice coding editor"
+                      >
+                        <span className="text-sm">💻</span>
+                        <span>Practice in Code Editor &rarr;</span>
+                      </Link>
+
                       <span className="bg-[#080d1a] border border-[#232f48] text-sky-300 font-mono text-xs px-3 py-1 rounded-lg flex items-center gap-1.5">
                         <span>⏱</span> {formatSeconds(item.timeTakenSec)}
                       </span>
@@ -842,12 +851,6 @@ export default function ReviewResults() {
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                         All Submissions Made While Attempting ({subs.length})
                       </span>
-                      <Link
-                        to={`/attempt/${attempt._id}/problem/${p._id}`}
-                        className="text-xs text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1"
-                      >
-                        Open Problem in Coding Arena &rarr;
-                      </Link>
                     </div>
 
                     {subs.length === 0 ? (

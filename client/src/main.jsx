@@ -41,6 +41,10 @@ const router = createBrowserRouter([
         element: <Protected authentication>{L(() => import('./pages/CodingArena'))}</Protected>,
       },
       {
+        path: 'practice/:problemId',
+        element: <Protected authentication>{L(() => import('./pages/CodingArena'))}</Protected>,
+      },
+      {
         path: 'review/:attemptId',
         element: <Protected authentication>{L(() => import('./pages/ReviewResults'))}</Protected>,
       },
