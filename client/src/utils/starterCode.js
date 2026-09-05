@@ -37,16 +37,23 @@ export function getProblemStarter(p, currentLang) {
   if (!p) return '';
   const sc = p.starterCode;
   if (!sc) return '';
-  if (typeof sc === 'string' && sc.trim()) return sc;
+  if (typeof sc === 'string' && sc.trim()) {
+    const looksLikeJava = /import\s+java|public\s+class|Scanner\s+/i.test(sc);
+    const looksLikeCpp = /#include|using\s+namespace|std::|int\s+main/i.test(sc);
+    if (currentLang === 'java' && looksLikeCpp && !looksLikeJava) return '';
+    if (currentLang === 'cpp' && looksLikeJava && !looksLikeCpp) return '';
+    return sc;
+  }
   if (typeof sc === 'object') {
     if (currentLang === 'cpp') {
       const cppCode = sc.cpp || sc['c++'] || sc['C++'] || sc.CPP || '';
-      if (cppCode && cppCode.trim()) return cppCode;
-    } else if (currentLang === 'java') {
-      const javaCode = sc.java || sc.Java || sc.JAVA || '';
-      if (javaCode && javaCode.trim()) return javaCode;
+      return typeof cppCode === 'string' ? cppCode : '';
     }
-    const anyCode = sc[currentLang] || sc.cpp || sc.java;
+    if (currentLang === 'java') {
+      const javaCode = sc.java || sc.Java || sc.JAVA || '';
+      return typeof javaCode === 'string' ? javaCode : '';
+    }
+    const anyCode = sc[currentLang];
     return typeof anyCode === 'string' ? anyCode : '';
   }
   return '';
