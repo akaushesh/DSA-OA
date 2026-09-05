@@ -10,10 +10,21 @@ import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
 import ModalConfirm from '../components/ModalConfirm';
 import { calculateProblemScore, getDifficultyPoints } from '../utils/scoring';
+import { getProblemStarter } from '../utils/starterCode';
 
 const STARTERS = {
   java: (title) => `import java.util.*;\nimport java.io.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // Write your solution here\n    }\n}\n`,
   cpp: () => `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    // Write your solution here\n    return 0;\n}\n`,
+};
+
+const isGenericStarter = (draftCode, currentLang, title) => {
+  if (!draftCode || typeof draftCode !== 'string') return false;
+  const clean = (s) => (s || '').replace(/\r\n/g, '\n').trim();
+  const d = clean(draftCode);
+  if (d === clean(STARTERS.cpp())) return true;
+  if (d === clean(STARTERS.java('Solution'))) return true;
+  if (title && d === clean(STARTERS.java(title))) return true;
+  return false;
 };
 
 export default function CodingArena() {
@@ -288,13 +299,15 @@ export default function CodingArena() {
       const p = r.data.statusCode?.problem;
       setProblem(p);
 
+      const customStarter = getProblemStarter(p, lang);
+      const fallbackStarter = STARTERS[lang] ? STARTERS[lang](p?.title || 'Solution') : STARTERS.cpp();
+
       // Preload saved draft code or fallback to starter template
       const draft = getDraftCode(problemId, lang);
-      if (draft) {
+      if (draft && (!customStarter || !isGenericStarter(draft, lang, p?.title))) {
         setCode(draft);
       } else {
-        const customStarter = p?.starterCode?.[lang];
-        setCode(customStarter || STARTERS[lang](p?.title || 'Solution'));
+        setCode(customStarter || fallbackStarter);
       }
 
       if (p?.category) setActiveSection(p.category);
@@ -349,16 +362,25 @@ export default function CodingArena() {
       }
       localStorage.setItem('preferredLanguage', newLang);
     } catch {}
-    const customStarter = problem?.starterCode?.[newLang];
-    setCode(customStarter || STARTERS[newLang](problem?.title || 'Solution'));
+
+    const draft = getDraftCode(problemId, newLang);
+    const customStarter = getProblemStarter(problem, newLang);
+    const fallbackStarter = STARTERS[newLang] ? STARTERS[newLang](problem?.title || 'Solution') : STARTERS.cpp();
+
+    if (draft && (!customStarter || !isGenericStarter(draft, newLang, problem?.title))) {
+      setCode(draft);
+    } else {
+      setCode(customStarter || fallbackStarter);
+    }
     toast(`Switched to ${newLang === 'cpp' ? 'C++' : 'Java'}`);
   };
 
   const handleResetCode = () => {
     // ponytail: native confirm avoids modal boilerplate while preventing accidental code loss
     if (!window.confirm('Reset code to starter template? Your current changes will be discarded.')) return;
-    const customStarter = problem?.starterCode?.[lang];
-    const starter = customStarter || STARTERS[lang]?.(problem?.title || 'Solution') || '';
+    const customStarter = getProblemStarter(problem, lang);
+    const fallbackStarter = STARTERS[lang]?.(problem?.title || 'Solution') || '';
+    const starter = customStarter || fallbackStarter;
     setCode(starter);
     saveDraftCode(problemId, lang, starter);
     toast.success('Code reset to starter template');

@@ -91,7 +91,7 @@ export const getAttemptReview = asyncHandler(async (req, res) => {
       select: 'name category problems timingMode totalTimeLimit description',
       populate: {
         path: 'problems',
-        select: 'title difficulty category timeLimit constraints inputFormat outputFormat description examples testCases',
+        select: 'title difficulty category timeLimit constraints inputFormat outputFormat description examples testCases starterCode',
       },
     })
     .populate({

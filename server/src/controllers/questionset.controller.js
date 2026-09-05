@@ -4,6 +4,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { QuestionSet } from '../models/questionset.model.js';
 import { Problem } from '../models/problem.model.js';
+import { normalizeStarterCode } from '../utils/starterCode.js';
 
 // Helper to normalize and resolve problems into valid ObjectIds
 async function resolveProblemIds(rawProblems, userId) {
@@ -34,11 +35,16 @@ async function resolveProblemIds(rawProblems, userId) {
     } else if (resolvedItem instanceof mongoose.Types.ObjectId) {
       resolvedIds.push(resolvedItem);
     } else if (typeof resolvedItem === 'object') {
+      const rawStarter = resolvedItem.starterCode ?? resolvedItem.starter_code ?? resolvedItem.starter ?? resolvedItem.boilerplate ?? resolvedItem.template ?? resolvedItem.code;
+      const normalizedItem = {
+        ...resolvedItem,
+        starterCode: normalizeStarterCode(rawStarter),
+      };
       if (resolvedItem._id && mongoose.Types.ObjectId.isValid(resolvedItem._id)) {
-        await Problem.findByIdAndUpdate(resolvedItem._id, { ...resolvedItem, createdBy: userId }).catch(() => {});
+        await Problem.findByIdAndUpdate(resolvedItem._id, { ...normalizedItem, createdBy: userId }).catch(() => {});
         resolvedIds.push(new mongoose.Types.ObjectId(resolvedItem._id));
       } else if (resolvedItem.title) {
-        const created = await Problem.create({ ...resolvedItem, createdBy: userId });
+        const created = await Problem.create({ ...normalizedItem, createdBy: userId });
         resolvedIds.push(created._id);
       }
     }

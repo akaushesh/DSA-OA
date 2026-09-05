@@ -2,12 +2,15 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { Problem } from '../models/problem.model.js';
+import { normalizeStarterCode } from '../utils/starterCode.js';
 
 // Admin: create problem
 export const createProblem = asyncHandler(async (req, res) => {
   const { title, description, difficulty, category, tags, inputFormat, outputFormat, constraints, examples, starterCode, timeLimit, memoryLimit, testCases } = req.body;
   if (!title || !description || !difficulty || !category) throw new ApiError(400, 'title, description, difficulty, category required');
-  const problem = await Problem.create({ title, description, difficulty, category, tags, inputFormat, outputFormat, constraints, examples, starterCode, timeLimit, memoryLimit, testCases, createdBy: req.user._id });
+  const rawStarter = starterCode ?? req.body.starter_code ?? req.body.starter;
+  const normalizedStarter = normalizeStarterCode(rawStarter);
+  const problem = await Problem.create({ title, description, difficulty, category, tags, inputFormat, outputFormat, constraints, examples, starterCode: normalizedStarter, timeLimit, memoryLimit, testCases, createdBy: req.user._id });
   return res.status(201).json(new ApiResponse(201, 'Problem created', { problem }));
 });
 
@@ -35,7 +38,11 @@ export const getProblemAdmin = asyncHandler(async (req, res) => {
 
 // Admin: update problem
 export const updateProblem = asyncHandler(async (req, res) => {
-  const problem = await Problem.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+  const updateData = { ...req.body };
+  if (req.body.starterCode !== undefined || req.body.starter_code !== undefined || req.body.starter !== undefined) {
+    updateData.starterCode = normalizeStarterCode(req.body.starterCode ?? req.body.starter_code ?? req.body.starter);
+  }
+  const problem = await Problem.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
   if (!problem) throw new ApiError(404, 'Problem not found');
   return res.json(new ApiResponse(200, 'Problem updated', { problem }));
 });

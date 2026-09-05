@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { createQuestionSet, importQuestionSet, updateQuestionSet, getQuestionSet } from '../../api/questionsets';
+import { normalizeStarterCode } from '../../utils/starterCode';
 import Navbar from '../../components/Navbar';
 
 const SAMPLE_DSA_JSON = [
@@ -106,6 +107,7 @@ export default function QuestionSetEditor() {
 
             if (s.problems && s.problems.length > 0) {
               const formattedProblems = s.problems.map(p => ({
+                ...(p._id ? { _id: p._id } : {}),
                 title: p.title,
                 difficulty: p.difficulty,
                 category: p.category || s.category || 'General',
@@ -113,6 +115,7 @@ export default function QuestionSetEditor() {
                 inputFormat: p.inputFormat || p.input_format || '',
                 outputFormat: p.outputFormat || p.output_format || '',
                 constraints: p.constraints || '',
+                starterCode: normalizeStarterCode(p.starterCode || p.starter_code),
                 examples: p.examples || [],
                 timeLimit: p.timeLimit || s.totalTimeLimit || 900,
                 memoryLimit: p.memoryLimit || 256,
@@ -135,7 +138,14 @@ export default function QuestionSetEditor() {
       if (!jsonInput.trim()) return { valid: false, error: 'JSON cannot be empty', items: [] };
       const parsed = JSON.parse(jsonInput);
       
-      const items = Array.isArray(parsed) ? parsed : (parsed.problems || parsed.questions || [parsed]);
+      const rawItems = Array.isArray(parsed) ? parsed : (parsed.problems || parsed.questions || [parsed]);
+      const items = rawItems.map(item => {
+        const rawStarter = item.starterCode ?? item.starter_code ?? item.starter ?? item.boilerplate ?? item.template ?? item.code;
+        return {
+          ...item,
+          starterCode: normalizeStarterCode(rawStarter),
+        };
+      });
       
       const sections = {};
       items.forEach(item => {
@@ -236,24 +246,28 @@ export default function QuestionSetEditor() {
         timingMode: timingMode,
         totalTimeLimit: timerMinutes * 60,
         isPublished: true,
-        problems: parsedData.items.map((p, idx) => ({
-          title: p.title || p.questionText || `Problem ${idx + 1}`,
-          description: p.description || p.questionText || '',
-          difficulty: p.difficulty || 'Medium',
-          category: p.category || p.section || category || 'General',
-          inputFormat: p.inputFormat || p.input_format || '',
-          outputFormat: p.outputFormat || p.output_format || '',
-          constraints: p.constraints || '',
-          starterCode: p.starterCode || undefined,
-          timeLimit: p.timeLimit || timerMinutes * 60,
-          memoryLimit: p.memoryLimit || 256,
-          examples: p.examples || [],
-          testCases: p.testCases || (p.options ? [
-            { input: '1', expectedOutput: p.correctAnswer || p.answer || 'A', isHidden: false }
-          ] : [
-            { input: 'sample', expectedOutput: 'output', isHidden: false }
-          ]),
-        })),
+        problems: parsedData.items.map((p, idx) => {
+          const rawStarter = p.starterCode ?? p.starter_code ?? p.starter ?? p.boilerplate ?? p.template ?? p.code;
+          return {
+            ...(p._id ? { _id: p._id } : {}),
+            title: p.title || p.questionText || `Problem ${idx + 1}`,
+            description: p.description || p.questionText || '',
+            difficulty: p.difficulty || 'Medium',
+            category: p.category || p.section || category || 'General',
+            inputFormat: p.inputFormat || p.input_format || '',
+            outputFormat: p.outputFormat || p.output_format || '',
+            constraints: p.constraints || '',
+            starterCode: normalizeStarterCode(rawStarter),
+            timeLimit: p.timeLimit || timerMinutes * 60,
+            memoryLimit: p.memoryLimit || 256,
+            examples: p.examples || [],
+            testCases: p.testCases || (p.options ? [
+              { input: '1', expectedOutput: p.correctAnswer || p.answer || 'A', isHidden: false }
+            ] : [
+              { input: 'sample', expectedOutput: 'output', isHidden: false }
+            ]),
+          };
+        }),
       };
 
       if (id) {
