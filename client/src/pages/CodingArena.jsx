@@ -17,7 +17,7 @@ const STARTERS = {
   cpp: () => `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    // Write your solution here\n    return 0;\n}\n`,
 };
 
-const isInvalidOrGenericDraft = (draftCode, currentLang, title) => {
+const isInvalidOrGenericDraft = (draftCode, currentLang, title, customStarter = '') => {
   if (!draftCode || typeof draftCode !== 'string') return true;
   const clean = (s) => (s || '').replace(/\r\n/g, '\n').trim();
   const d = clean(draftCode);
@@ -25,6 +25,7 @@ const isInvalidOrGenericDraft = (draftCode, currentLang, title) => {
   if (d === clean(STARTERS.cpp())) return true;
   if (d === clean(STARTERS.java('Solution'))) return true;
   if (title && d === clean(STARTERS.java(title))) return true;
+  if (customStarter && d === clean(customStarter)) return true;
   // If draft is for the wrong language (e.g. C++ in Java slot or vice versa)
   if (currentLang === 'java' && /#include\s*<|using\s+namespace\s+std/i.test(d)) return true;
   if (currentLang === 'cpp' && /import\s+java\.|public\s+class\s+/i.test(d)) return true;
@@ -260,13 +261,16 @@ export default function CodingArena() {
   const saveDraftCode = useCallback((pId, currentLang, val) => {
     try {
       if (val !== undefined && val !== null) {
-        // Sanity check: don't save C++ code into java draft or vice versa
-        if (currentLang === 'java' && /#include\s*<|using\s+namespace\s+std/i.test(val)) return;
-        if (currentLang === 'cpp' && /import\s+java\.|public\s+class\s+/i.test(val)) return;
+        const customStarter = problem ? getProblemStarter(problem, currentLang) : '';
+        if (isInvalidOrGenericDraft(val, currentLang, problem?.title, customStarter)) {
+          // Never persist starter templates or cross-language code as drafts
+          sessionStorage.removeItem(getDraftKey(pId, currentLang));
+          return;
+        }
         sessionStorage.setItem(getDraftKey(pId, currentLang), val);
       }
     } catch {}
-  }, [getDraftKey]);
+  }, [getDraftKey, problem]);
 
   // Load Problem Data & Submissions for THIS problem
   const loadSubmissions = useCallback(async () => {
@@ -308,13 +312,25 @@ export default function CodingArena() {
 
       const latestSub = subs?.[0];
 
-      // In practice mode or attempt review transition:
-      // Determine language preference or fallback to latest submission's language
+      // If user arrived from review results (fromAttempt query param),
+      // discard any stale practice draft so the user's submitted code opens
+      if (isPractice && fromAttemptId) {
+        try {
+          sessionStorage.removeItem(getDraftKey(problemId, 'cpp'));
+          sessionStorage.removeItem(getDraftKey(problemId, 'java'));
+        } catch {}
+      }
+
+      // Determine starting language:
+      // In practice mode with previous submissions, prioritize the latest submission's language
       const currentLangPref = (() => {
         try {
           if (!isPractice && attemptId) {
             const attemptLang = sessionStorage.getItem(`attempt_lang_${attemptId}`);
             if (attemptLang === 'cpp' || attemptLang === 'java') return attemptLang;
+          }
+          if (isPractice && latestSub?.language) {
+            return latestSub.language;
           }
           const userPref = localStorage.getItem('preferredLanguage');
           if (userPref === 'cpp' || userPref === 'java') return userPref;
@@ -322,32 +338,45 @@ export default function CodingArena() {
         return latestSub?.language || lang || 'cpp';
       })();
 
+      const customStarter = getProblemStarter(p, currentLangPref);
+      const fallbackStarter = STARTERS[currentLangPref] ? STARTERS[currentLangPref](p?.title || 'Solution') : STARTERS.cpp();
+      const starter = customStarter || fallbackStarter;
+
       const draft = getDraftCode(problemId, currentLangPref);
-      if (draft && !isInvalidOrGenericDraft(draft, currentLangPref, p?.title)) {
+      const subInLang = (subs || []).find(s => s.language === currentLangPref);
+
+      if (draft && !isInvalidOrGenericDraft(draft, currentLangPref, p?.title, customStarter)) {
         setLang(currentLangPref);
         setCode(draft);
+      } else if (subInLang?.code) {
+        // Preload user's latest submission for this language/problem
+        setLang(currentLangPref);
+        setCode(subInLang.code);
+        try {
+          if (!isPractice && attemptId) {
+            sessionStorage.setItem(`attempt_lang_${attemptId}`, currentLangPref);
+          }
+          localStorage.setItem('preferredLanguage', currentLangPref);
+        } catch {}
       } else if (latestSub?.code) {
-        // Preload user's latest submission for this problem
+        // Fallback to latest submission in whatever language it was written in
+        const subLang = latestSub.language || 'cpp';
+        setLang(subLang);
         setCode(latestSub.code);
-        if (latestSub.language && (latestSub.language === 'cpp' || latestSub.language === 'java')) {
-          setLang(latestSub.language);
-          try {
-            if (!isPractice && attemptId) {
-              sessionStorage.setItem(`attempt_lang_${attemptId}`, latestSub.language);
-            }
-            localStorage.setItem('preferredLanguage', latestSub.language);
-          } catch {}
-        }
+        try {
+          if (!isPractice && attemptId) {
+            sessionStorage.setItem(`attempt_lang_${attemptId}`, subLang);
+          }
+          localStorage.setItem('preferredLanguage', subLang);
+        } catch {}
       } else {
         setLang(currentLangPref);
-        const customStarter = getProblemStarter(p, currentLangPref);
-        const fallbackStarter = STARTERS[currentLangPref] ? STARTERS[currentLangPref](p?.title || 'Solution') : STARTERS.cpp();
-        setCode(customStarter || fallbackStarter);
+        setCode(starter);
       }
     }).catch(() => {
       toast.error('Failed to load problem statement');
     });
-  }, [problemId, isPractice, attemptId, loadSubmissions, getDraftCode]);
+  }, [problemId, isPractice, attemptId, fromAttemptId, loadSubmissions, getDraftCode, getDraftKey]);
 
   // Sections Grouping
   const sections = useMemo(() => {
@@ -399,7 +428,7 @@ export default function CodingArena() {
     const customStarter = getProblemStarter(problem, newLang);
     const fallbackStarter = STARTERS[newLang] ? STARTERS[newLang](problem?.title || 'Solution') : STARTERS.cpp();
 
-    if (draft && !isInvalidOrGenericDraft(draft, newLang, problem?.title)) {
+    if (draft && !isInvalidOrGenericDraft(draft, newLang, problem?.title, customStarter)) {
       setCode(draft);
     } else if (subInLang?.code) {
       setCode(subInLang.code);
@@ -502,6 +531,9 @@ export default function CodingArena() {
       }
       const res = await submitCode(payload);
       const subId = res.data.statusCode?.submissionId;
+      try {
+        sessionStorage.removeItem(getDraftKey(problemId, lang));
+      } catch {}
       pollSubmission(subId);
     } catch (err) {
       console.error(err);
@@ -509,7 +541,7 @@ export default function CodingArena() {
     } finally {
       setSubmitting(false);
     }
-  }, [code, problemId, isPractice, attempt, attemptId, lang, pollSubmission]);
+  }, [code, problemId, isPractice, attempt, attemptId, lang, pollSubmission, getDraftKey]);
 
   // Keyboard Shortcuts: Cmd + Enter OR Cmd + ' -> Run Code & Switch to Test Results
   useEffect(() => {
