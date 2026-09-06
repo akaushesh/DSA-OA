@@ -54,14 +54,21 @@ export const deleteProblem = asyncHandler(async (req, res) => {
   return res.json(new ApiResponse(200, 'Problem deleted', {}));
 });
 
-// User: get problem WITHOUT hidden test case content
+export const sanitizeProblemTestCases = (testCases, isPractice) => {
+  if (isPractice) return testCases;
+  return (testCases || []).map(tc =>
+    tc.isHidden ? { isHidden: true } : tc
+  );
+};
+
+// User: get problem (strips hidden test case content unless in practice mode)
 export const getProblemUser = asyncHandler(async (req, res) => {
   const problem = await Problem.findById(req.params.id);
   if (!problem) throw new ApiError(404, 'Problem not found');
-  // Strip hidden test case input/expectedOutput
+  const isPractice = req.query.practice === 'true' || req.query.practice === '1';
+  // ponytail: in practice mode, preserve hidden test case input/expectedOutput for learning
   const sanitized = problem.toObject();
-  sanitized.testCases = sanitized.testCases.map(tc =>
-    tc.isHidden ? { isHidden: true } : tc
-  );
+  sanitized.testCases = sanitizeProblemTestCases(sanitized.testCases, isPractice);
   return res.json(new ApiResponse(200, 'Problem fetched', { problem: sanitized }));
 });
+

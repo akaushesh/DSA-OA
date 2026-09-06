@@ -303,7 +303,7 @@ export default function CodingArena() {
     setSelectedSubView(null);
 
     Promise.all([
-      getProblem(problemId),
+      getProblem(problemId, false, isPractice ? { practice: true } : {}),
       loadSubmissions()
     ]).then(([probRes, subs]) => {
       const p = probRes.data.statusCode?.problem;
@@ -1278,7 +1278,7 @@ export default function CodingArena() {
                           Visible Test Cases ({visibleTestCases.length})
                         </h4>
                         <span className="text-[11px] text-slate-500 font-mono">
-                          +{problem.testCases?.length - visibleTestCases.length} Hidden Cases
+                          +{problem.testCases?.length - visibleTestCases.length} Hidden Cases {isPractice ? '(Shown Below)' : ''}
                         </span>
                       </div>
                       <div className="space-y-3">
@@ -1297,6 +1297,43 @@ export default function CodingArena() {
                             </div>
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hidden Test Cases with Expected Output (Practice Mode only) */}
+                  {isPractice && (problem.testCases?.filter(tc => tc.isHidden) || []).length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>🔒</span> Hidden Test Cases ({problem.testCases.filter(tc => tc.isHidden).length})
+                        </h4>
+                        <span className="text-[10px] px-2 py-0.5 rounded border bg-purple-950/60 border-purple-700 text-purple-300 font-mono">
+                          Practice Mode Enabled
+                        </span>
+                      </div>
+                      <div className="space-y-3">
+                        {problem.testCases.map((tc, i) => {
+                          if (!tc.isHidden) return null;
+                          return (
+                            <div key={i} className="bg-[#11192e] border border-purple-900/40 rounded-xl p-4 space-y-2 text-xs font-mono">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[11px] font-bold text-purple-300 mb-1">🔒 Hidden Case #{i + 1}</p>
+                                <span className="text-[10px] text-purple-400 font-mono">Confidential Case (Practice View)</span>
+                              </div>
+                              <div className="space-y-2 bg-[#080d1a] p-3 rounded-lg border border-[#1e2a47]">
+                                <div>
+                                  <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
+                                  <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.input || '<empty input>'}</pre>
+                                </div>
+                                <div>
+                                  <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Expected Output:</span>
+                                  <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.expectedOutput || '<empty output>'}</pre>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1406,8 +1443,8 @@ export default function CodingArena() {
                               const isHidden = tr.isHidden || originalTc?.isHidden;
                               const tcPts = getDifficultyPoints(problem.difficulty).tcPoints?.[i] || Math.round(getDifficultyPoints(problem.difficulty).totalPoints / (submission.totalTests || 6));
 
-                              // VISIBLE TEST CASE: Shows Input, Expected Output, and User's Output!
-                              if (!isHidden) {
+                              // VISIBLE TEST CASE (or any test case in Practice Mode): Shows Input, Expected Output, and User's Output!
+                              if (!isHidden || isPractice) {
                                 return (
                                   <div
                                     key={i}
@@ -1417,15 +1454,20 @@ export default function CodingArena() {
                                         : 'bg-rose-950/20 border-rose-800/60 text-rose-300'
                                     }`}
                                   >
-                                    <div className="flex items-center justify-between font-bold">
-                                      <span className="flex items-center gap-2">
+                                    <div className="flex items-center justify-between font-bold flex-wrap gap-2">
+                                      <span className="flex items-center gap-2 flex-wrap">
                                         <span>{tr.passed ? '✓' : '✗'}</span>
-                                        <span>Visible Test Case #{i + 1}</span>
+                                        <span>{isHidden ? `🔒 Hidden Test Case #${i + 1}` : `Visible Test Case #${i + 1}`}</span>
                                         <span className={`text-[10px] px-2 py-0.2 rounded border ${
                                           tr.passed ? 'bg-emerald-900/40 border-emerald-700 text-emerald-300' : 'bg-rose-900/40 border-rose-700 text-rose-300'
                                         }`}>
                                           {tr.passed ? 'PASSED' : 'WRONG ANSWER'}
                                         </span>
+                                        {isHidden && isPractice && (
+                                          <span className="text-[10px] px-2 py-0.2 rounded border bg-purple-950/60 border-purple-700 text-purple-300 font-mono">
+                                            PRACTICE MODE
+                                          </span>
+                                        )}
                                         <span className="text-[10px] font-mono font-bold text-amber-300">
                                           ({tr.passed ? `+${tcPts}` : '0'}/{tcPts} pts)
                                         </span>
@@ -1434,15 +1476,15 @@ export default function CodingArena() {
                                     </div>
 
                                     {/* Input & Expected Output */}
-                                    {originalTc && (
+                                    {originalTc && (originalTc.input !== undefined || originalTc.expectedOutput !== undefined) && (
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-xs">
                                         <div className="bg-[#080d1a] border border-[#1e2a47] p-2.5 rounded-lg">
                                           <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
-                                          <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{originalTc.input}</pre>
+                                          <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{originalTc.input || '<empty input>'}</pre>
                                         </div>
                                         <div className="bg-[#080d1a] border border-[#1e2a47] p-2.5 rounded-lg">
                                           <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Expected Output:</span>
-                                          <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{originalTc.expectedOutput}</pre>
+                                          <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{originalTc.expectedOutput || '<empty output>'}</pre>
                                         </div>
                                       </div>
                                     )}
@@ -1464,7 +1506,7 @@ export default function CodingArena() {
                                 );
                               }
 
-                              // HIDDEN TEST CASE: ONLY tells if Working / Passed or Failed (Zero leak of data)
+                              // HIDDEN TEST CASE (Assessment mode): ONLY tells if Working / Passed or Failed (Zero leak of data)
                               return (
                                 <div
                                   key={i}
@@ -1524,16 +1566,27 @@ export default function CodingArena() {
                         </button>
                       </div>
 
-                      <div className="bg-[#11192e] border border-[#1e2a47] rounded-xl p-4 flex items-center justify-between text-xs">
+                      <div className="bg-[#11192e] border border-[#1e2a47] rounded-xl p-4 flex items-center justify-between text-xs flex-wrap gap-2">
                         <div className="flex items-center gap-2.5">
                           <VerdictBadge verdict={selectedSubView.verdict} />
                           <span className="font-mono text-slate-300 uppercase">{selectedSubView.language}</span>
                           <span className="text-slate-500">·</span>
                           <span className="text-slate-400">{new Date(selectedSubView.submittedAt).toLocaleTimeString()}</span>
                         </div>
-                        <span className="text-slate-400 font-mono font-semibold">
-                          {selectedSubView.passedTests}/{selectedSubView.totalTests} passed
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-slate-400 font-mono font-semibold">
+                            {selectedSubView.passedTests}/{selectedSubView.totalTests} passed
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSubmission(selectedSubView);
+                              setActiveTab('results');
+                            }}
+                            className="text-xs bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-sky-300 font-bold px-2.5 py-1 rounded-lg transition"
+                          >
+                            📊 View Results &amp; Outputs
+                          </button>
+                        </div>
                       </div>
 
                       <pre className="bg-[#080d1a] border border-[#1e2a47] rounded-xl p-4 text-xs font-mono text-emerald-300 overflow-x-auto leading-relaxed max-h-96">
