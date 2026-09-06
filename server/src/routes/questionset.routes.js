@@ -8,6 +8,7 @@ import {
   getQuestionSet,
   updateQuestionSet,
   deleteQuestionSet,
+  reevaluateQuestionSet,
 } from '../controllers/questionset.controller.js';
 
 const router = Router();
@@ -17,6 +18,10 @@ router.post('/', verifyJWT, createQuestionSet);
 router.post('/import', verifyJWT, importQuestionSet);
 router.post('/admin', verifyJWT, createQuestionSet);
 router.post('/admin/import', verifyJWT, importQuestionSet);
+
+// Reevaluate question set scores for all candidates (Admin only)
+router.post('/:id/reevaluate', verifyJWT, verifyAdmin, reevaluateQuestionSet);
+router.post('/admin/:id/reevaluate', verifyJWT, verifyAdmin, reevaluateQuestionSet);
 
 // Edit and Delete (creator or admin check inside controller)
 router.put('/:id', verifyJWT, updateQuestionSet);

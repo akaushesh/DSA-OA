@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getQuestionSets, deleteQuestionSet } from '../../api/questionsets';
+import toast from 'react-hot-toast';
+import { getQuestionSets, deleteQuestionSet, reevaluateQuestionSet } from '../../api/questionsets';
 import Navbar from '../../components/Navbar';
 
 export default function QuestionSetManager() {
   const [sets, setSets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reevaluatingId, setReevaluatingId] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -19,6 +21,23 @@ export default function QuestionSetManager() {
     if (!confirm('Delete this question set?')) return;
     await deleteQuestionSet(id);
     load();
+  };
+
+  const handleReevaluate = async (id, name) => {
+    if (!confirm(`Reevaluate all user scores for "${name || 'this question set'}"?\n\nThis will take the last attempt for every question, recalculate points, and update candidate scores everywhere.`)) {
+      return;
+    }
+    setReevaluatingId(id);
+    try {
+      const res = await reevaluateQuestionSet(id);
+      const data = res.data?.statusCode || {};
+      toast.success(res.data?.message || `Reevaluated successfully! Updated ${data.attemptsUpdated || 0} attempt(s).`);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reevaluate question set');
+    } finally {
+      setReevaluatingId(null);
+    }
   };
 
   return (
@@ -51,15 +70,30 @@ export default function QuestionSetManager() {
                   </p>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => handleReevaluate(s._id, s.name)}
+                    disabled={reevaluatingId === s._id}
+                    title="Reevaluate points for every candidate using last attempts"
+                    className="text-xs font-semibold text-amber-300 border border-amber-600/70 bg-amber-950/20 px-3 py-1 rounded hover:bg-amber-900/40 hover:border-amber-500 transition disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {reevaluatingId === s._id ? (
+                      <>
+                        <span className="w-2.5 h-2.5 border-2 border-amber-300 border-t-transparent rounded-full animate-spin"></span>
+                        Reevaluating...
+                      </>
+                    ) : (
+                      'Reevaluate'
+                    )}
+                  </button>
                   <Link
                     to={`/admin/questionsets/${s._id}/edit`}
-                    className="text-xs text-blue-400 border border-blue-800 px-3 py-1 rounded hover:bg-blue-900/30"
+                    className="text-xs text-blue-400 border border-blue-800 px-3 py-1 rounded hover:bg-blue-900/30 flex items-center"
                   >
                     Edit
                   </Link>
                   <button
                     onClick={() => handleDelete(s._id)}
-                    className="text-xs text-red-400 border border-red-800 px-3 py-1 rounded hover:bg-red-900/30"
+                    className="text-xs text-red-400 border border-red-800 px-3 py-1 rounded hover:bg-red-900/30 flex items-center"
                   >
                     Delete
                   </button>

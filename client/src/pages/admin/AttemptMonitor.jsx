@@ -11,6 +11,7 @@ import {
 } from '../../api/attempts';
 import Navbar from '../../components/Navbar';
 import { calculateAttemptScoreBreakdown, getDifficultyPoints, calculateProblemScore } from '../../utils/scoring';
+import { reevaluateQuestionSet } from '../../api/questionsets';
 
 export default function AttemptMonitor() {
   const [attempts, setAttempts] = useState([]);
@@ -206,6 +207,33 @@ export default function AttemptMonitor() {
     });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [attempts]);
+
+  const [reevaluatingSet, setReevaluatingSet] = useState(false);
+
+  const handleReevaluateSet = async (setId) => {
+    const targetSet = uniqueQuestionSets.find((s) => s.id === setId);
+    if (
+      !confirm(
+        `Reevaluate all candidate scores for "${targetSet?.name || 'this question set'}"?\n\nThis will take the last attempt for every question, recalculate points, and update candidate scores everywhere.`
+      )
+    ) {
+      return;
+    }
+    setReevaluatingSet(true);
+    try {
+      const res = await reevaluateQuestionSet(setId);
+      const data = res.data?.statusCode || {};
+      toast.success(
+        res.data?.message ||
+          `Reevaluated successfully! Updated ${data.attemptsUpdated || 0} attempt(s) and ${data.submissionsUpdated || 0} submission(s).`
+      );
+      fetchAttempts(true);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reevaluate scores');
+    } finally {
+      setReevaluatingSet(false);
+    }
+  };
 
   // Handle Action: Stop Attempt (Admin only)
   const handleStopAttempt = async (attempt) => {
@@ -427,18 +455,38 @@ export default function AttemptMonitor() {
           {/* Search Input & Set Filter */}
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
             {/* Set dropdown */}
-            <select
-              value={selectedSetFilter}
-              onChange={(e) => setSelectedSetFilter(e.target.value)}
-              className="w-full sm:w-48 bg-[#080d1a] border border-[#223255] text-slate-300 text-xs font-semibold px-3 py-2 rounded-xl focus:outline-none focus:border-purple-500"
-            >
-              <option value="all">All Question Sets</option>
-              {uniqueQuestionSets.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <select
+                value={selectedSetFilter}
+                onChange={(e) => setSelectedSetFilter(e.target.value)}
+                className="w-full sm:w-48 bg-[#080d1a] border border-[#223255] text-slate-300 text-xs font-semibold px-3 py-2 rounded-xl focus:outline-none focus:border-purple-500"
+              >
+                <option value="all">All Question Sets</option>
+                {uniqueQuestionSets.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+
+              {selectedSetFilter !== 'all' && (
+                <button
+                  onClick={() => handleReevaluateSet(selectedSetFilter)}
+                  disabled={reevaluatingSet}
+                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 hover:border-amber-400 font-bold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                  title="Reevaluate points for every candidate using last attempts"
+                >
+                  {reevaluatingSet ? (
+                    <>
+                      <span className="w-2.5 h-2.5 border-2 border-amber-300 border-t-transparent rounded-full animate-spin"></span>
+                      Reevaluating...
+                    </>
+                  ) : (
+                    'Reevaluate'
+                  )}
+                </button>
+              )}
+            </div>
 
             {/* Search */}
             <div className="relative w-full sm:w-64">

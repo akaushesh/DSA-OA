@@ -3,6 +3,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { Attempt } from '../models/attempt.model.js';
 import { QuestionSet } from '../models/questionset.model.js';
+import { Submission } from '../models/submission.model.js';
 import { calculateAttemptScoreBreakdown, getDifficultyPoints } from '../utils/scoring.js';
 
 export const startAttempt = asyncHandler(async (req, res) => {
@@ -104,11 +105,23 @@ export const getAttemptReview = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Forbidden');
   }
 
+  // Filter strictly to submissions made during test time
+  const attemptStart = new Date(attempt.startedAt || attempt.createdAt || 0).getTime();
+  const attemptEnd = attempt.endedAt
+    ? new Date(attempt.endedAt).getTime() + 15000
+    : attemptStart + (attempt.totalTimeLimit || 3600) * 1000 + 15000;
+
+  const inTestSubmissions = (attempt.submissions || []).filter((s) => {
+    if (!s) return false;
+    const sTime = new Date(s.submittedAt || s.createdAt || 0).getTime();
+    return sTime >= attemptStart - 5000 && sTime <= attemptEnd;
+  });
+
   let scoreBreakdown = { totalScore: attempt.score || 0, maxPossibleScore: attempt.maxPossibleScore || 0, problemScores: {} };
-  if (attempt.questionSetId?.problems && attempt.submissions) {
+  if (attempt.questionSetId?.problems && inTestSubmissions.length > 0) {
     scoreBreakdown = calculateAttemptScoreBreakdown(
       attempt.questionSetId.problems,
-      attempt.submissions
+      inTestSubmissions
     );
     if (attempt.score !== scoreBreakdown.totalScore || attempt.maxPossibleScore !== scoreBreakdown.maxPossibleScore) {
       attempt.score = scoreBreakdown.totalScore;
@@ -155,7 +168,7 @@ export const allAttempts = asyncHandler(async (req, res) => {
     })
     .populate({
       path: 'submissions',
-      select: 'problemId language code status verdict passedTests totalTests runtime memory submittedAt',
+      select: 'problemId score language code status verdict passedTests totalTests runtime memory submittedAt',
     })
     .sort({ startedAt: -1 })
     .skip((page - 1) * limit)

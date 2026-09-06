@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "node src/utils/starterCode.test.js && node src/utils/problemSanitizer.test.js"
+    "test": "node src/utils/starterCode.test.js && node src/utils/problemSanitizer.test.js && node src/utils/scoring.test.js"
   },
   "keywords": [],
   "author": "",

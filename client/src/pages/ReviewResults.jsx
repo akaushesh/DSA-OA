@@ -109,21 +109,15 @@ export default function ReviewResults() {
       const totalRuntimeMs = pSubs.reduce((acc, s) => acc + (s.runtime || 500), 0);
       const timeTakenSec = Math.max(12, Math.round(totalRuntimeMs / 1000) + (pSubs.length * 45));
 
-      // Calculate MAX score achieved across all submissions for this question
+      // Calculate score achieved based on the LAST attempt for this question
       const diffRules = getDifficultyPoints(p.difficulty);
       const maxPossiblePoints = diffRules.totalPoints;
 
-      let maxScore = 0;
-      let bestSub = null;
-      pSubs.forEach(s => {
-        const sScore = s.score !== undefined && s.score !== null
-          ? s.score
-          : calculateProblemScore(p.difficulty, s.passedTests, s.totalTests);
-        if (sScore >= maxScore) {
-          maxScore = sScore;
-          bestSub = s;
-        }
-      });
+      const lastAttemptScore = latestSub
+        ? (latestSub.score !== undefined && latestSub.score !== null
+            ? latestSub.score
+            : calculateProblemScore(p.difficulty, latestSub.passedTests, latestSub.totalTests))
+        : 0;
 
       return {
         problem: p,
@@ -132,10 +126,10 @@ export default function ReviewResults() {
         status,
         submissions: pSubs,
         latestSub,
-        bestSub: bestSub || latestSub,
-        maxScore,
+        bestSub: latestSub,
+        maxScore: lastAttemptScore,
         maxPossiblePoints,
-        hasAC,
+        hasAC: latestSub?.verdict === 'AC',
         timeTakenSec: hasAttempted ? timeTakenSec : 0,
       };
     });
@@ -864,6 +858,7 @@ export default function ReviewResults() {
                           const subScore = sub.score !== undefined && sub.score !== null
                             ? sub.score
                             : calculateProblemScore(p.difficulty, sub.passedTests, sub.totalTests);
+                          const isLast = (sub._id || sIdx) === (item.latestSub?._id || (subs.length - 1));
                           const isBest = subScore === item.maxScore && subScore > 0;
                           const testDetails = getSubmissionTestDetails(sub, p);
 
@@ -881,11 +876,15 @@ export default function ReviewResults() {
                                   <span className="text-slate-400">{sub.passedTests}/{sub.totalTests} tests passed</span>
                                   <span className="text-slate-500">·</span>
                                   <span className="text-amber-300 font-bold">{subScore} pts</span>
-                                  {isBest && (
-                                    <span className="text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-md">
-                                      ★ Best Score
+                                  {isLast ? (
+                                    <span className="text-[10px] font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-md">
+                                      ★ Final Attempt (Graded)
                                     </span>
-                                  )}
+                                  ) : isBest ? (
+                                    <span className="text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-md">
+                                      ★ High Score
+                                    </span>
+                                  ) : null}
                                 </div>
 
                                 <div className="flex items-center gap-2">

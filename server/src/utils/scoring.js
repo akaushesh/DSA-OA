@@ -49,10 +49,10 @@ export function calculateProblemScore(difficulty, passedTests = 0, totalTests = 
 }
 
 /**
- * Calculates an attempt's total score by taking the MAX score per question (not the last).
- * Returns { totalScore, maxPossibleScore, problemScores: { [problemId]: maxScore } }
+ * Calculates an attempt's total score by taking the LAST attempt (submission) per question.
+ * Returns { totalScore, maxPossibleScore, problemScores: { [problemId]: score }, percentage }
  */
-export function calculateAttemptScoreBreakdown(problems = [], submissions = []) {
+export function calculateAttemptScoreBreakdown(problems = [], submissions = [], options = {}) {
   const problemScores = {};
   let totalScore = 0;
   let maxPossibleScore = 0;
@@ -66,31 +66,54 @@ export function calculateAttemptScoreBreakdown(problems = [], submissions = []) 
     subsByProblem[pId].push(sub);
   });
 
+  // Sort submissions chronologically so last element is the latest attempt
+  Object.keys(subsByProblem).forEach((pId) => {
+    subsByProblem[pId].sort((a, b) => {
+      const timeA = new Date(a.submittedAt || a.createdAt || 0).getTime();
+      const timeB = new Date(b.submittedAt || b.createdAt || 0).getTime();
+      return timeA - timeB;
+    });
+  });
+
   problems.forEach((p) => {
     const pId = (p._id || p)?.toString();
     const rules = getDifficultyPoints(p.difficulty);
     maxPossibleScore += rules.totalPoints;
 
     const probSubs = subsByProblem[pId] || [];
-    let maxScoreForProblem = 0;
+    let problemScore = 0;
 
-    probSubs.forEach((sub) => {
-      const subScore =
-        sub.score !== undefined && sub.score !== null
-          ? sub.score
-          : calculateProblemScore(p.difficulty, sub.passedTests, sub.totalTests);
-      if (subScore > maxScoreForProblem) {
-        maxScoreForProblem = subScore;
+    // ponytail: scores default to last attempt per question; pass useMaxScore: true for legacy max
+    if (options.useMaxScore) {
+      probSubs.forEach((sub) => {
+        const subScore =
+          sub.score !== undefined && sub.score !== null
+            ? sub.score
+            : calculateProblemScore(p.difficulty, sub.passedTests, sub.totalTests);
+        if (subScore > problemScore) {
+          problemScore = subScore;
+        }
+      });
+    } else {
+      if (probSubs.length > 0) {
+        const lastSub = probSubs[probSubs.length - 1];
+        problemScore =
+          lastSub.score !== undefined && lastSub.score !== null
+            ? lastSub.score
+            : calculateProblemScore(p.difficulty, lastSub.passedTests, lastSub.totalTests);
       }
-    });
+    }
 
-    problemScores[pId] = maxScoreForProblem;
-    totalScore += maxScoreForProblem;
+    problemScores[pId] = problemScore;
+    totalScore += problemScore;
   });
+
+  const percentage = maxPossibleScore > 0 ? Math.round((totalScore / maxPossibleScore) * 100) : 0;
 
   return {
     totalScore,
     maxPossibleScore,
     problemScores,
+    percentage,
   };
 }

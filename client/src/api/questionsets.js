@@ -6,3 +6,4 @@ export const createQuestionSet = (data) => API.post('/questionsets', data);
 export const importQuestionSet = (data) => API.post('/questionsets/import', data);
 export const updateQuestionSet = (id, data) => API.put(`/questionsets/admin/${id}`, data);
 export const deleteQuestionSet = (id) => API.delete(`/questionsets/admin/${id}`);
+export const reevaluateQuestionSet = (id) => API.post(`/questionsets/admin/${id}/reevaluate`);
