@@ -6,6 +6,7 @@ import { myAttempts } from '../api/attempts';
 import Navbar from '../components/Navbar';
 import Loader from '../components/Loader';
 import VerdictBadge from '../components/VerdictBadge';
+import CategoryTrendsChart from '../components/CategoryTrendsChart';
 
 const CATEGORIES = ['All', 'General', 'Graphs', 'Arrays', 'Strings', 'Trees', 'DP', 'Greedy', 'Sorting', 'Math', 'Backtracking'];
 
@@ -195,6 +196,13 @@ export default function Dashboard() {
             </span>
           </div>
         </div>
+
+        {/* RECENT PERFORMANCE TRENDS & CATEGORY ANALYTICS */}
+        <CategoryTrendsChart
+          attempts={attempts}
+          title="Performance Trends & Category Analytics"
+          subtitle="Track your recent test score trajectory and skill proficiency across DSA categories"
+        />
 
         {/* SEARCH, CATEGORY DROPDOWN & TABS ROW */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">

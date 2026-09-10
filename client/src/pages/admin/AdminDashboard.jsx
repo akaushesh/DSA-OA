@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getStats } from '../../api/admin';
+import { allAttempts } from '../../api/attempts';
 import Navbar from '../../components/Navbar';
+import CategoryTrendsChart from '../../components/CategoryTrendsChart';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
+  const [attempts, setAttempts] = useState([]);
 
   useEffect(() => {
     getStats().then(r => setStats(r.data.statusCode)).catch(() => {});
+    allAttempts({ limit: 100 }).then(r => setAttempts(r.data.statusCode?.attempts || [])).catch(() => {});
   }, []);
 
   const cards = [
@@ -35,7 +39,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-[#0b132b] text-white">
       <Navbar />
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         <h1 className="text-2xl font-black mb-1">Admin Dashboard</h1>
         <p className="text-gray-400 text-sm mb-6">Monitor the platform & control assessments</p>
 
@@ -62,7 +66,7 @@ export default function AdminDashboard() {
           </Link>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {cards.map(c => (
             <Link key={c.label} to={c.to} className={`border rounded-xl p-5 hover:opacity-80 transition relative ${BG[c.color]}`}>
               {c.isLive && (
@@ -73,6 +77,17 @@ export default function AdminDashboard() {
             </Link>
           ))}
         </div>
+
+        {/* PLATFORM RECENT TRENDS & CATEGORY ANALYTICS */}
+        <div className="mb-8">
+          <CategoryTrendsChart
+            attempts={attempts}
+            isAdmin={true}
+            title="Platform Performance Trends & Category Breakdown"
+            subtitle="Analyze recent student scores, skill distribution, and question set category performance across all users"
+          />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             { to: '/admin/attempts', label: '🛡️ Live Assessment Monitor & Control', desc: 'Real-time visibility into all user attempts, progress, code, and controls', highlight: true },
