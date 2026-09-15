@@ -4,7 +4,7 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { Submission } from '../models/submission.model.js';
 import { Problem } from '../models/problem.model.js';
 import { Attempt } from '../models/attempt.model.js';
-import { runAllTestCases } from '../services/judge0.service.js';
+import { runAllTestCases, runCustomInput } from '../services/judge0.service.js';
 import { calculateProblemScore, calculateAttemptScoreBreakdown } from '../utils/scoring.js';
 
 export const submitCode = asyncHandler(async (req, res) => {
@@ -114,3 +114,28 @@ export const mySubmissions = asyncHandler(async (req, res) => {
     
   return res.json(new ApiResponse(200, 'Submissions fetched', { submissions }));
 });
+
+export const runCustom = asyncHandler(async (req, res) => {
+  const { language, code, stdin = '', problemId } = req.body;
+  if (!language || !code) throw new ApiError(400, 'language and code required');
+  if (!['java', 'cpp'].includes(language)) throw new ApiError(400, 'Language must be java or cpp');
+
+  let memoryLimit = 256;
+  let timeLimit = 5;
+  if (problemId) {
+    const problem = await Problem.findById(problemId).select('memoryLimit');
+    if (problem?.memoryLimit) memoryLimit = problem.memoryLimit;
+  }
+
+  // ponytail: isolated execution; no submission document or grading records created
+  const result = await runCustomInput({
+    language,
+    code,
+    stdin,
+    timeLimit,
+    memoryLimit,
+  });
+
+  return res.json(new ApiResponse(200, 'Custom input executed', result));
+});
+

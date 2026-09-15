@@ -4,7 +4,7 @@ import Editor from '@monaco-editor/react';
 import toast from 'react-hot-toast';
 import { getProblem } from '../api/problems';
 import { getQuestionSet } from '../api/questionsets';
-import { submitCode, getSubmission, mySubmissions } from '../api/submissions';
+import { submitCode, runCustomCode, getSubmission, mySubmissions } from '../api/submissions';
 import { endAttempt, getAttempt, saveTimers } from '../api/attempts';
 import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
@@ -73,6 +73,11 @@ export default function CodingArena() {
   const [selectedSubView, setSelectedSubView] = useState(null);
   const [polling, setPolling] = useState(false);
   const pollRef = useRef(null);
+
+  // Custom Input Playground State
+  const [customInput, setCustomInput] = useState('');
+  const [customRunning, setCustomRunning] = useState(false);
+  const [customResult, setCustomResult] = useState(null);
 
   // Question Map & Assessment State
   const [markedForReview, setMarkedForReview] = useState({}); // { [problemId]: boolean }
@@ -309,6 +314,12 @@ export default function CodingArena() {
       const p = probRes.data.statusCode?.problem;
       setProblem(p);
       if (p?.category) setActiveSection(p.category);
+      if (p?.examples?.[0]?.input) {
+        setCustomInput(p.examples[0].input);
+      } else {
+        setCustomInput('');
+      }
+      setCustomResult(null);
 
       const latestSub = subs?.[0];
 
@@ -543,17 +554,61 @@ export default function CodingArena() {
     }
   }, [code, problemId, isPractice, attempt, attemptId, lang, pollSubmission, getDraftKey]);
 
-  // Keyboard Shortcuts: Cmd + Enter OR Cmd + ' -> Run Code & Switch to Test Results
+  const handleRunCustom = useCallback(async () => {
+    if (!code.trim()) {
+      toast.error('Please write some code before running');
+      return;
+    }
+    setActiveTab('custom');
+    setSelectedSubView(null);
+    setCustomRunning(true);
+    setCustomResult(null);
+
+    const toastId = toast.loading('Executing custom testcase...', { icon: '⚡' });
+    try {
+      const res = await runCustomCode({
+        problemId,
+        language: lang,
+        code,
+        stdin: customInput,
+      });
+
+      const result = res.data.statusCode;
+      setCustomResult(result);
+
+      if (result.error === 'CE') {
+        toast.error('Compilation Error', { id: toastId });
+      } else if (result.error === 'TLE' || result.timedOut) {
+        toast.error('Time Limit Exceeded (> 5.0s)', { id: toastId });
+      } else if (result.error === 'RE') {
+        toast.error('Runtime Error', { id: toastId });
+      } else {
+        toast.success(`Custom run finished (${result.runtime}ms)`, { id: toastId });
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to execute custom input', { id: toastId });
+    } finally {
+      setCustomRunning(false);
+    }
+  }, [code, problemId, lang, customInput]);
+
+  // Keyboard Shortcuts:
+  // Cmd + Shift + Enter -> Run Custom Input
+  // Cmd + Enter -> Run & Submit (graded)
   useEffect(() => {
     const handleShortcut = (e) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'Enter' || e.key === "'")) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'Enter' || e.key === "'")) {
+        e.preventDefault();
+        handleRunCustom();
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === 'Enter' || e.key === "'")) {
         e.preventDefault();
         handleSubmit();
       }
     };
     window.addEventListener('keydown', handleShortcut, true);
     return () => window.removeEventListener('keydown', handleShortcut, true);
-  }, [handleSubmit]);
+  }, [handleSubmit, handleRunCustom]);
 
   // Per-problem tick: active problem's timer counts down and immediately syncs to localStorage
   useEffect(() => {
@@ -1100,6 +1155,21 @@ export default function CodingArena() {
                 {!hasMcqOptions && (
                   <>
                     <button
+                      onClick={() => { setActiveTab('custom'); setSelectedSubView(null); }}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1.5 flex-shrink-0 ${
+                        activeTab === 'custom' ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      🧪 Custom Input
+                      {customRunning && (
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                      )}
+                      {!customRunning && customResult && (
+                        <span className={`w-2 h-2 rounded-full ${customResult.error ? 'bg-rose-400' : 'bg-emerald-400'}`} />
+                      )}
+                    </button>
+
+                    <button
                       onClick={() => { setActiveTab('results'); setSelectedSubView(null); }}
                       className={`px-3 py-1 text-xs font-bold rounded-lg transition flex items-center gap-1.5 flex-shrink-0 ${
                         activeTab === 'results' ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'
@@ -1337,6 +1407,235 @@ export default function CodingArena() {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* TAB: CUSTOM TESTCASE EXECUTION */}
+              {activeTab === 'custom' && (
+                <div className="space-y-6">
+                  {/* Title Card */}
+                  <div className="bg-[#11192e] border border-[#1e2a47] rounded-2xl p-5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🧪</span>
+                        <h3 className="text-white font-extrabold text-sm md:text-base">
+                          Custom Testcase Playground
+                        </h3>
+                        <span className="bg-sky-950/70 border border-sky-800 text-sky-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          Unmarked
+                        </span>
+                      </div>
+                      <p className="text-slate-400 text-xs mt-1">
+                        Supply your own input to verify logic, debug variables, or test edge cases. This run is not scored.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {problem?.examples?.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setCustomInput(problem.examples[0].input || '')}
+                          className="text-xs bg-[#0b132b] hover:bg-[#18233c] text-sky-300 border border-sky-900/60 px-2.5 py-1.5 rounded-lg transition font-semibold flex items-center gap-1 cursor-pointer"
+                          title="Load Example 1's input"
+                        >
+                          <span>📋</span>
+                          <span>Use Example 1</span>
+                        </button>
+                      )}
+                      {customInput && (
+                        <button
+                          type="button"
+                          onClick={() => setCustomInput('')}
+                          className="text-xs bg-[#0b132b] hover:bg-[#18233c] text-slate-400 hover:text-white border border-[#203152] px-2.5 py-1.5 rounded-lg transition font-semibold cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* INPUT SECTION */}
+                  <div className="bg-[#11192e] border border-[#1e2a47] rounded-2xl p-5 shadow-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <span>⌨️</span> Standard Input (stdin)
+                      </label>
+                      <span className="text-[11px] text-slate-500 font-mono">
+                        {customInput.length} chars
+                      </span>
+                    </div>
+
+                    <textarea
+                      rows={6}
+                      value={customInput}
+                      onChange={e => setCustomInput(e.target.value)}
+                      placeholder="Enter test inputs here (e.g. numbers, strings, arrays as expected by your code)..."
+                      className="w-full bg-[#080d1a] border border-[#203152] rounded-xl p-3.5 text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-sky-500 transition resize-y leading-relaxed"
+                    />
+
+                    <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleRunCustom}
+                        disabled={customRunning || submitting || polling}
+                        className="bg-sky-600 hover:bg-sky-500 active:scale-95 disabled:opacity-50 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-sky-950/50 cursor-pointer"
+                      >
+                        {customRunning ? (
+                          <>
+                            <span className="animate-spin">⏳</span>
+                            <span>Running Custom Input...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>▶</span>
+                            <span>Run with Custom Input</span>
+                          </>
+                        )}
+                      </button>
+
+                      <span className="text-[11px] text-slate-500">
+                        Shortcut: <kbd className="bg-[#080d1a] border border-[#203152] px-1.5 py-0.5 rounded text-[10px] text-slate-400 font-mono">⌘/Ctrl + Shift + Enter</kbd>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* OUTPUT SECTION */}
+                  <div className="bg-[#11192e] border border-[#1e2a47] rounded-2xl p-5 shadow-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <span>🖥️</span> Execution Output
+                      </h4>
+
+                      {customResult && !customRunning && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-slate-400">
+                            ⏱ {customResult.runtime}ms
+                          </span>
+                          <span
+                            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                              customResult.error === 'CE'
+                                ? 'bg-rose-950/70 text-rose-300 border-rose-800'
+                                : customResult.error === 'TLE' || customResult.timedOut
+                                ? 'bg-amber-950/70 text-amber-300 border-amber-800'
+                                : customResult.error === 'RE'
+                                ? 'bg-orange-950/70 text-orange-300 border-orange-800'
+                                : 'bg-emerald-950/70 text-emerald-300 border-emerald-800'
+                            }`}
+                          >
+                            {customResult.error === 'CE'
+                              ? 'Compilation Error'
+                              : customResult.error === 'TLE' || customResult.timedOut
+                              ? 'Time Limit Exceeded'
+                              : customResult.error === 'RE'
+                              ? 'Runtime Error'
+                              : '✓ Executed Successfully'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {customRunning && (
+                      <div className="p-8 text-center bg-[#080d1a] border border-[#203152] rounded-xl space-y-2">
+                        <div className="text-2xl animate-bounce">⚡</div>
+                        <p className="text-white font-bold text-xs">Compiling & Executing Code...</p>
+                        <p className="text-slate-400 text-[11px]">Feeding your stdin into the sandbox process.</p>
+                      </div>
+                    )}
+
+                    {!customRunning && !customResult && (
+                      <div className="p-8 text-center text-slate-500 text-xs bg-[#080d1a] border border-[#203152] rounded-xl">
+                        Enter your custom input above and click <strong className="text-sky-400">▶ Run with Custom Input</strong> to see standard output here.
+                      </div>
+                    )}
+
+                    {!customRunning && customResult && (
+                      <div className="space-y-3">
+                        {/* Compilation Error Display */}
+                        {customResult.error === 'CE' && (
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-rose-400 block">
+                              Compiler Error Details:
+                            </span>
+                            <pre className="bg-[#080d1a] border border-rose-900/60 rounded-xl p-3 text-xs font-mono text-rose-300 whitespace-pre-wrap overflow-x-auto max-h-60 custom-scrollbar">
+                              {customResult.stderr || 'Compilation failed with no compiler diagnostic.'}
+                            </pre>
+                          </div>
+                        )}
+
+                        {/* Runtime Error Display */}
+                        {customResult.error === 'RE' && (
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-orange-400 block">
+                              Runtime Error (Non-zero exit):
+                            </span>
+                            <pre className="bg-[#080d1a] border border-orange-900/60 rounded-xl p-3 text-xs font-mono text-orange-300 whitespace-pre-wrap overflow-x-auto max-h-60 custom-scrollbar">
+                              {customResult.stderr || 'Process terminated abnormally.'}
+                            </pre>
+                          </div>
+                        )}
+
+                        {/* Time Limit Exceeded Display */}
+                        {(customResult.error === 'TLE' || customResult.timedOut) && (
+                          <div className="p-4 bg-amber-950/40 border border-amber-800 rounded-xl text-xs text-amber-300">
+                            ⚠️ Program ran for longer than 5.0 seconds and was terminated (Time Limit Exceeded). Check for infinite loops or inefficient recursion.
+                          </div>
+                        )}
+
+                        {/* Standard Output Display */}
+                        {customResult.error !== 'CE' && (
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-slate-400 block">
+                                Standard Output (stdout):
+                              </span>
+                              {customResult.stdout && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(customResult.stdout);
+                                    toast.success('Copied output to clipboard');
+                                  }}
+                                  className="text-[10px] text-slate-400 hover:text-white bg-[#0b132b] px-2 py-0.5 rounded border border-[#203152] transition cursor-pointer"
+                                >
+                                  Copy Output
+                                </button>
+                              )}
+                            </div>
+
+                            {customResult.stdout ? (
+                              <pre className="bg-[#080d1a] border border-[#203152] rounded-xl p-3 text-xs font-mono text-emerald-300 whitespace-pre-wrap overflow-x-auto max-h-72 custom-scrollbar">
+                                {customResult.stdout}
+                              </pre>
+                            ) : (
+                              <div className="bg-[#080d1a] border border-[#203152] rounded-xl p-3 text-xs text-slate-500 italic">
+                                (Program executed successfully with no stdout output)
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Standard Error (if non-empty and not CE/RE) */}
+                        {customResult.stderr && customResult.error !== 'CE' && customResult.error !== 'RE' && (
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-slate-400 block">
+                              Standard Error (stderr):
+                            </span>
+                            <pre className="bg-[#080d1a] border border-[#203152] rounded-xl p-3 text-xs font-mono text-amber-300 whitespace-pre-wrap overflow-x-auto max-h-40 custom-scrollbar">
+                              {customResult.stderr}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Friendly Note */}
+                  <div className="p-3.5 bg-[#080d1a] border border-[#1e2a47] rounded-xl text-[11px] text-slate-400 flex items-center gap-2">
+                    <span className="text-base">ℹ️</span>
+                    <span>
+                      Custom test executions are completely isolated. They are <strong>never scored</strong>, do not submit your solution, and do not modify your assessment marks. When you are ready, click <strong>▶ Run & Submit</strong> to record an official submission.
+                    </span>
+                  </div>
                 </div>
               )}
 
@@ -1720,7 +2019,7 @@ export default function CodingArena() {
                   <button
                     type="button"
                     onClick={handleResetCode}
-                    disabled={submitting || polling}
+                    disabled={submitting || polling || customRunning}
                     title="Reset code to starter template"
                     className="bg-[#18223a] hover:bg-[#202d4d] active:scale-95 disabled:opacity-50 border border-[#2a3656] text-slate-300 hover:text-white font-semibold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1.5"
                   >
@@ -1728,8 +2027,18 @@ export default function CodingArena() {
                     <span>Start Over</span>
                   </button>
                   <button
+                    type="button"
+                    onClick={handleRunCustom}
+                    disabled={submitting || polling || customRunning}
+                    title="Test your code against custom input (unscored)"
+                    className="bg-[#18223a] hover:bg-[#202d4d] active:scale-95 disabled:opacity-50 border border-sky-800/60 text-sky-400 hover:text-sky-300 font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <span>{customRunning ? '⚡' : '🧪'}</span>
+                    <span>{customRunning ? 'Testing...' : 'Test Custom Input'}</span>
+                  </button>
+                  <button
                     onClick={handleSubmit}
-                    disabled={submitting || polling}
+                    disabled={submitting || polling || customRunning}
                     className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:opacity-50 text-white text-xs font-bold px-5 py-2 rounded-xl transition flex items-center gap-2 shadow-lg shadow-emerald-950/40"
                   >
                     {submitting ? 'Submitting...' : polling ? '⚡ Judging...' : '▶ Run & Submit'}

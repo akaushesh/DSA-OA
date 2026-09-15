@@ -211,3 +211,22 @@ export async function runAllTestCases({ language, code, testCases, timeLimit = 5
     testResults: results,
   };
 }
+
+export async function runCustomInput({ language, code, stdin = '', timeLimit = 5, memoryLimit = 256 }) {
+  const start = Date.now();
+  const normalizedStdin = typeof stdin === 'string'
+    ? (stdin.length > 0 && !stdin.endsWith('\n') ? `${stdin}\n` : stdin)
+    : '';
+
+  const res = await runOne({ language, code, stdin: normalizedStdin, timeLimit, memoryLimit });
+  const elapsed = Date.now() - start;
+
+  return {
+    stdout: res.stdout || '',
+    stderr: res.stderr || '',
+    timedOut: Boolean(res.timedOut),
+    error: res.error || null,
+    runtime: elapsed,
+  };
+}
+
