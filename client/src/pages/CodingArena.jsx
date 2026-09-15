@@ -9,6 +9,7 @@ import { endAttempt, getAttempt, saveTimers } from '../api/attempts';
 import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
 import ModalConfirm from '../components/ModalConfirm';
+import TestCaseBox from '../components/TestCaseBox';
 import { calculateProblemScore, getDifficultyPoints } from '../utils/scoring';
 import { getProblemStarter } from '../utils/starterCode';
 
@@ -1355,15 +1356,25 @@ export default function CodingArena() {
                         {visibleTestCases.map((tc, i) => (
                           <div key={i} className="bg-[#11192e] border border-[#1e2a47] rounded-xl p-4 space-y-2 text-xs font-mono">
                             <p className="text-[11px] font-bold text-sky-400 mb-1">Visible Case #{i + 1}</p>
-                            <div className="space-y-2 bg-[#080d1a] p-3 rounded-lg border border-[#1e2a47]">
-                              <div>
-                                <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
-                                <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.input}</pre>
-                              </div>
-                              <div>
-                                <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Expected Output:</span>
-                                <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.expectedOutput}</pre>
-                              </div>
+                            <div className="space-y-2">
+                              <TestCaseBox
+                                label="Input:"
+                                content={tc.input}
+                                emptyPlaceholder="<empty input>"
+                                colorClass="text-slate-200"
+                                bgClass="bg-[#080d1a]"
+                                borderClass="border-[#1e2a47]"
+                                copyLabel="Copied test case input"
+                              />
+                              <TestCaseBox
+                                label="Expected Output:"
+                                content={tc.expectedOutput}
+                                emptyPlaceholder="<empty output>"
+                                colorClass="text-emerald-400 font-bold"
+                                bgClass="bg-[#080d1a]"
+                                borderClass="border-[#1e2a47]"
+                                copyLabel="Copied expected output"
+                              />
                             </div>
                           </div>
                         ))}
@@ -1391,15 +1402,25 @@ export default function CodingArena() {
                                 <p className="text-[11px] font-bold text-purple-300 mb-1">🔒 Hidden Case #{i + 1}</p>
                                 <span className="text-[10px] text-purple-400 font-mono">Confidential Case (Practice View)</span>
                               </div>
-                              <div className="space-y-2 bg-[#080d1a] p-3 rounded-lg border border-[#1e2a47]">
-                                <div>
-                                  <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
-                                  <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.input || '<empty input>'}</pre>
-                                </div>
-                                <div>
-                                  <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Expected Output:</span>
-                                  <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.expectedOutput || '<empty output>'}</pre>
-                                </div>
+                              <div className="space-y-2">
+                                <TestCaseBox
+                                  label="Input:"
+                                  content={tc.input}
+                                  emptyPlaceholder="<empty input>"
+                                  colorClass="text-slate-200"
+                                  bgClass="bg-[#080d1a]"
+                                  borderClass="border-[#1e2a47]"
+                                  copyLabel="Copied test case input"
+                                />
+                                <TestCaseBox
+                                  label="Expected Output:"
+                                  content={tc.expectedOutput}
+                                  emptyPlaceholder="<empty output>"
+                                  colorClass="text-emerald-400 font-bold"
+                                  bgClass="bg-[#080d1a]"
+                                  borderClass="border-[#1e2a47]"
+                                  copyLabel="Copied expected output"
+                                />
                               </div>
                             </div>
                           );
@@ -1777,24 +1798,37 @@ export default function CodingArena() {
                                     {/* Input & Expected Output */}
                                     {originalTc && (originalTc.input !== undefined || originalTc.expectedOutput !== undefined) && (
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-xs">
-                                        <div className="bg-[#080d1a] border border-[#1e2a47] p-2.5 rounded-lg">
-                                          <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
-                                          <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{originalTc.input || '<empty input>'}</pre>
-                                        </div>
-                                        <div className="bg-[#080d1a] border border-[#1e2a47] p-2.5 rounded-lg">
-                                          <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Expected Output:</span>
-                                          <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{originalTc.expectedOutput || '<empty output>'}</pre>
-                                        </div>
+                                        <TestCaseBox
+                                          label="Input:"
+                                          content={originalTc.input}
+                                          emptyPlaceholder="<empty input>"
+                                          colorClass="text-slate-200"
+                                          bgClass="bg-[#080d1a]"
+                                          borderClass="border-[#1e2a47]"
+                                          copyLabel="Copied test case input"
+                                        />
+                                        <TestCaseBox
+                                          label="Expected Output:"
+                                          content={originalTc.expectedOutput}
+                                          emptyPlaceholder="<empty output>"
+                                          colorClass="text-emerald-400 font-bold"
+                                          bgClass="bg-[#080d1a]"
+                                          borderClass="border-[#1e2a47]"
+                                          copyLabel="Copied expected output"
+                                        />
                                       </div>
                                     )}
 
-                                    {/* User's Actual Output */}
-                                    <div className="bg-[#080d1a] border border-[#1e2a47] p-2.5 rounded-lg font-mono text-xs">
-                                      <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Your Output:</span>
-                                      <pre className={`whitespace-pre-wrap font-mono text-xs overflow-x-auto ${tr.passed ? 'text-emerald-300 font-bold' : 'text-rose-400 font-bold'}`}>
-                                        {tr.stdout !== null && tr.stdout !== undefined && tr.stdout !== '' ? tr.stdout : '<no output produced>'}
-                                      </pre>
-                                    </div>
+                                    {/* User's Actual Output / Answer Given in this Attempt */}
+                                    <TestCaseBox
+                                      label="Answer Given in this Attempt:"
+                                      content={tr.stdout}
+                                      emptyPlaceholder="<no output produced>"
+                                      colorClass={tr.passed ? 'text-emerald-300 font-bold' : 'text-rose-400 font-bold'}
+                                      bgClass="bg-[#080d1a]"
+                                      borderClass="border-[#1e2a47]"
+                                      copyLabel="Copied answer output"
+                                    />
 
                                     {tr.stderr && (
                                       <pre className="text-xs font-mono text-rose-400 bg-rose-950/40 p-2.5 rounded-lg border border-rose-800/40 whitespace-pre-wrap">

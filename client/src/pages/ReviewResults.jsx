@@ -7,6 +7,7 @@ import Loader from '../components/Loader';
 import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
 import ModalConfirm from '../components/ModalConfirm';
+import TestCaseBox from '../components/TestCaseBox';
 import { calculateProblemScore, getDifficultyPoints, calculateAttemptScoreBreakdown } from '../utils/scoring';
 
 export default function ReviewResults() {
@@ -763,14 +764,24 @@ export default function ReviewResults() {
                                   </span>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  <div className="bg-[#0b1020] border border-[#18233c] p-2.5 rounded-lg">
-                                    <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
-                                    <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.input || '<empty input>'}</pre>
-                                  </div>
-                                  <div className="bg-[#0b1020] border border-[#18233c] p-2.5 rounded-lg">
-                                    <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Expected Output:</span>
-                                    <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{tc.expectedOutput || '<empty output>'}</pre>
-                                  </div>
+                                  <TestCaseBox
+                                    label="Input:"
+                                    content={tc.input}
+                                    emptyPlaceholder="<empty input>"
+                                    colorClass="text-slate-200"
+                                    bgClass="bg-[#0b1020]"
+                                    borderClass="border-[#18233c]"
+                                    copyLabel="Copied test case input"
+                                  />
+                                  <TestCaseBox
+                                    label="Expected Output:"
+                                    content={tc.expectedOutput}
+                                    emptyPlaceholder="<empty output>"
+                                    colorClass="text-emerald-400 font-bold"
+                                    bgClass="bg-[#0b1020]"
+                                    borderClass="border-[#18233c]"
+                                    copyLabel="Copied expected output"
+                                  />
                                 </div>
                               </div>
                             ))}
@@ -972,24 +983,35 @@ export default function ReviewResults() {
                                           </div>
 
                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-xs">
-                                            <div className="bg-[#050811] border border-[#18233c] p-2.5 rounded-lg">
-                                              <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Input:</span>
-                                              <pre className="text-slate-200 whitespace-pre-wrap font-mono text-xs overflow-x-auto">{td.input || '<empty input>'}</pre>
-                                            </div>
-                                            <div className="bg-[#050811] border border-[#18233c] p-2.5 rounded-lg">
-                                              <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Expected Output:</span>
-                                              <pre className="text-emerald-400 font-bold whitespace-pre-wrap font-mono text-xs overflow-x-auto">{td.expectedOutput || '<empty output>'}</pre>
-                                            </div>
+                                            <TestCaseBox
+                                              label="Input:"
+                                              content={td.input}
+                                              emptyPlaceholder="<empty input>"
+                                              colorClass="text-slate-200"
+                                              bgClass="bg-[#050811]"
+                                              borderClass="border-[#18233c]"
+                                              copyLabel="Copied test case input"
+                                            />
+                                            <TestCaseBox
+                                              label="Expected Output:"
+                                              content={td.expectedOutput}
+                                              emptyPlaceholder="<empty output>"
+                                              colorClass="text-emerald-400 font-bold"
+                                              bgClass="bg-[#050811]"
+                                              borderClass="border-[#18233c]"
+                                              copyLabel="Copied expected output"
+                                            />
                                           </div>
 
-                                          <div className="bg-[#050811] border border-[#18233c] p-2.5 rounded-lg font-mono text-xs">
-                                            <span className="text-slate-500 font-sans block text-[11px] mb-0.5">Answer Given in this Attempt:</span>
-                                            <pre className={`whitespace-pre-wrap font-mono text-xs overflow-x-auto ${
-                                              td.passed ? 'text-emerald-300 font-bold' : 'text-rose-400 font-bold'
-                                            }`}>
-                                              {td.actualOutput}
-                                            </pre>
-                                          </div>
+                                          <TestCaseBox
+                                            label="Answer Given in this Attempt:"
+                                            content={td.actualOutput}
+                                            emptyPlaceholder="<no output produced>"
+                                            colorClass={td.passed ? 'text-emerald-300 font-bold' : 'text-rose-400 font-bold'}
+                                            bgClass="bg-[#050811]"
+                                            borderClass="border-[#18233c]"
+                                            copyLabel="Copied answer output"
+                                          />
 
                                           {td.stderr && (
                                             <pre className="text-xs font-mono text-rose-400 bg-rose-950/40 p-2.5 rounded-lg border border-rose-800/40 whitespace-pre-wrap overflow-x-auto">
