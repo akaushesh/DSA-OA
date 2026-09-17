@@ -1,4 +1,4 @@
-import API from "../api/axios";
+import API from "../api/axios.js";
 
 class AuthService {
   async login(username, password) {
@@ -56,7 +56,19 @@ class AuthService {
   }
 
   getAccessToken() {
-    return localStorage.getItem("accessToken");
+    const direct = localStorage.getItem("accessToken");
+    if (direct) return direct;
+    try {
+      const raw = localStorage.getItem("auth");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.accessToken) {
+          localStorage.setItem("accessToken", parsed.accessToken);
+          return parsed.accessToken;
+        }
+      }
+    } catch {}
+    return null;
   }
 
   setRole(role) {
@@ -64,7 +76,18 @@ class AuthService {
   }
 
   getRole() {
-    return localStorage.getItem("role");
+    const direct = localStorage.getItem("role");
+    if (direct) {
+      return direct.replace(/^"|"$/g, "");
+    }
+    try {
+      const raw = localStorage.getItem("auth");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.userData?.role) return parsed.userData.role;
+      }
+    } catch {}
+    return null;
   }
 
   isAdmin() {
@@ -72,7 +95,8 @@ class AuthService {
   }
 
   isLoggedIn() {
-    return !!this.getAccessToken() && !this.isTokenExpired();
+    const token = this.getAccessToken();
+    return Boolean(token && !this.isTokenExpired(token));
   }
 
   isTokenExpired(token = this.getAccessToken()) {
@@ -90,6 +114,7 @@ class AuthService {
   clearAuthData() {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("role");
+    localStorage.removeItem("auth");
     delete API.defaults.headers.common["Authorization"];
   }
 

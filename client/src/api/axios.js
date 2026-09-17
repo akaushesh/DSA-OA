@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // ponytail: always use relative '/api' unless an external production URL is given
-const envUrl = import.meta.env.VITE_API_URL;
+const envUrl = import.meta.env?.VITE_API_URL;
 const baseURL = (envUrl && !envUrl.includes('localhost')) ? envUrl : '/api';
 
 const API = axios.create({
@@ -22,6 +22,8 @@ API.interceptors.response.use(
     if (error.response?.status === 401 && !error.config?.url?.includes('/login')) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('role');
+      localStorage.removeItem('auth');
+      delete API.defaults.headers.common['Authorization'];
     }
     return Promise.reject(error);
   }

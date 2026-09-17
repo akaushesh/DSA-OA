@@ -6,6 +6,7 @@ import { login, logout } from './app/authslice';
 import { setRole } from './app/roleslice';
 import { Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import storage from './app/storage.js';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -15,6 +16,14 @@ function App() {
     const token = authService.getAccessToken();
     if (token && !authService.isTokenExpired(token)) {
       authService.setAuthHeader(token);
+
+      // Hydrate state immediately from cached storage so user sees no login screen/flicker
+      const cachedAuth = storage.get('auth');
+      if (cachedAuth?.userData) {
+        dispatch(login({ user: cachedAuth.userData, accessToken: token }));
+        dispatch(setRole(cachedAuth.userData.role || authService.getRole() || 'user'));
+      }
+
       authService
         .getCurrentUser()
         .then((user) => {
@@ -26,9 +35,12 @@ function App() {
             authService.clearAuthData();
           }
         })
-        .catch(() => {
-          dispatch(logout());
-          authService.clearAuthData();
+        .catch((err) => {
+          // ponytail: Only invalidate session if server explicitly returns 401 Unauthorized
+          if (err?.response?.status === 401) {
+            dispatch(logout());
+            authService.clearAuthData();
+          }
         })
         .finally(() => setLoading(false));
     } else {

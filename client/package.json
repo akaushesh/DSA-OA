@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "node src/utils/textUtils.test.js && node src/utils/trends.test.js && node src/services/Auth.test.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

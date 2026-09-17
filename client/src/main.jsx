@@ -14,8 +14,8 @@ const router = createBrowserRouter([
     path: '/',
     element: <App />,
     children: [
-      { index: true, element: L(() => import('./pages/Login')) },
-      { path: 'register', element: L(() => import('./pages/Register')) },
+      { index: true, element: <Protected authentication={false}>{L(() => import('./pages/Login'))}</Protected> },
+      { path: 'register', element: <Protected authentication={false}>{L(() => import('./pages/Register'))}</Protected> },
       {
         path: 'dashboard',
         element: <Protected authentication>{L(() => import('./pages/Dashboard'))}</Protected>,

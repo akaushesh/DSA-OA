@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import authService from '../services/Auth';
@@ -11,6 +11,12 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (authService.isLoggedIn()) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

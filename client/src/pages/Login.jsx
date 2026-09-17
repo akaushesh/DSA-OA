@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -13,6 +13,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (authService.isLoggedIn()) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
