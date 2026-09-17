@@ -1573,26 +1573,34 @@ export default function CodingArena() {
                       <div className="space-y-3">
                         {/* Compilation Error Display */}
                         {customResult.error === 'CE' && (
-                          <div className="space-y-1.5">
-                            <span className="text-[11px] font-bold text-rose-400 block">
-                              Compiler Error Details:
-                            </span>
-                            <pre className="bg-[#080d1a] border border-rose-900/60 rounded-xl p-3 text-xs font-mono text-rose-300 whitespace-pre-wrap overflow-x-auto max-h-60 custom-scrollbar">
-                              {customResult.stderr || 'Compilation failed with no compiler diagnostic.'}
-                            </pre>
-                          </div>
+                          <TestCaseBox
+                            label="Compiler Error Details:"
+                            content={customResult.stderr || 'Compilation failed with no compiler diagnostic.'}
+                            colorClass="text-rose-300 font-mono"
+                            labelColorClass="text-rose-400 font-bold"
+                            toggleColorClass="text-rose-400 hover:text-rose-300"
+                            bgClass="bg-[#080d1a]"
+                            borderClass="border-rose-900/60"
+                            maxLines={8}
+                            maxChars={400}
+                            copyLabel="Copied compiler error"
+                          />
                         )}
 
                         {/* Runtime Error Display */}
                         {customResult.error === 'RE' && (
-                          <div className="space-y-1.5">
-                            <span className="text-[11px] font-bold text-orange-400 block">
-                              Runtime Error (Non-zero exit):
-                            </span>
-                            <pre className="bg-[#080d1a] border border-orange-900/60 rounded-xl p-3 text-xs font-mono text-orange-300 whitespace-pre-wrap overflow-x-auto max-h-60 custom-scrollbar">
-                              {customResult.stderr || 'Process terminated abnormally.'}
-                            </pre>
-                          </div>
+                          <TestCaseBox
+                            label="Runtime Error (Non-zero exit):"
+                            content={customResult.stderr || 'Process terminated abnormally.'}
+                            colorClass="text-orange-300 font-mono"
+                            labelColorClass="text-orange-400 font-bold"
+                            toggleColorClass="text-orange-400 hover:text-orange-300"
+                            bgClass="bg-[#080d1a]"
+                            borderClass="border-orange-900/60"
+                            maxLines={6}
+                            maxChars={300}
+                            copyLabel="Copied runtime error"
+                          />
                         )}
 
                         {/* Time Limit Exceeded Display */}
@@ -1740,14 +1748,18 @@ export default function CodingArena() {
 
                       {/* Compilation Error Output */}
                       {submission.compileError && (
-                        <div>
-                          <h4 className="text-xs font-bold text-rose-400 uppercase tracking-wider mb-2">
-                            Compiler Output / Diagnostics
-                          </h4>
-                          <pre className="text-xs font-mono text-rose-300 bg-rose-950/30 border border-rose-800/50 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap leading-relaxed">
-                            {submission.compileError}
-                          </pre>
-                        </div>
+                        <TestCaseBox
+                          label="Compiler Output / Diagnostics:"
+                          content={submission.compileError}
+                          colorClass="text-rose-300 font-mono"
+                          labelColorClass="text-rose-400 font-bold"
+                          toggleColorClass="text-rose-400 hover:text-rose-300"
+                          bgClass="bg-rose-950/30"
+                          borderClass="border-rose-800/50"
+                          maxLines={8}
+                          maxChars={400}
+                          copyLabel="Copied compiler error"
+                        />
                       )}
 
                       {/* Test Case Breakdown: Visible (Expected vs Actual) vs Hidden (Working/Failed only) */}
@@ -1831,9 +1843,18 @@ export default function CodingArena() {
                                     />
 
                                     {tr.stderr && (
-                                      <pre className="text-xs font-mono text-rose-400 bg-rose-950/40 p-2.5 rounded-lg border border-rose-800/40 whitespace-pre-wrap">
-                                        {tr.stderr}
-                                      </pre>
+                                      <TestCaseBox
+                                        label="Error / Runtime Diagnostic:"
+                                        content={tr.stderr}
+                                        colorClass="text-rose-400 font-mono"
+                                        labelColorClass="text-rose-400 font-bold"
+                                        toggleColorClass="text-rose-400 hover:text-rose-300"
+                                        bgClass="bg-rose-950/40"
+                                        borderClass="border-rose-800/40"
+                                        maxLines={6}
+                                        maxChars={300}
+                                        copyLabel="Copied error message"
+                                      />
                                     )}
                                   </div>
                                 );

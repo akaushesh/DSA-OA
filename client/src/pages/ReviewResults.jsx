@@ -945,10 +945,18 @@ export default function ReviewResults() {
                                   </div>
 
                                   {sub.compileError ? (
-                                    <div className="p-3.5 bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs font-mono rounded-xl space-y-1">
-                                      <span className="font-bold text-rose-400 block">Compilation / Diagnostics Error:</span>
-                                      <pre className="whitespace-pre-wrap overflow-x-auto">{sub.compileError}</pre>
-                                    </div>
+                                    <TestCaseBox
+                                      label="Compilation / Diagnostics Error:"
+                                      content={sub.compileError}
+                                      colorClass="text-rose-300"
+                                      bgClass="bg-rose-950/40"
+                                      borderClass="border-rose-900/60"
+                                      labelColorClass="text-rose-400"
+                                      toggleColorClass="text-rose-400 hover:text-rose-300"
+                                      maxLines={8}
+                                      maxChars={400}
+                                      copyLabel="Copied compilation error"
+                                    />
                                   ) : (
                                     <div className="space-y-3">
                                       {testDetails.map((td) => (
@@ -1014,9 +1022,18 @@ export default function ReviewResults() {
                                           />
 
                                           {td.stderr && (
-                                            <pre className="text-xs font-mono text-rose-400 bg-rose-950/40 p-2.5 rounded-lg border border-rose-800/40 whitespace-pre-wrap overflow-x-auto">
-                                              {td.stderr}
-                                            </pre>
+                                            <TestCaseBox
+                                              label="Runtime Error / Diagnostics (stderr):"
+                                              content={td.stderr}
+                                              colorClass="text-rose-300"
+                                              bgClass="bg-rose-950/40"
+                                              borderClass="border-rose-800/40"
+                                              labelColorClass="text-rose-400"
+                                              toggleColorClass="text-rose-400 hover:text-rose-300"
+                                              maxLines={6}
+                                              maxChars={300}
+                                              copyLabel="Copied runtime error"
+                                            />
                                           )}
                                         </div>
                                       ))}
@@ -1033,10 +1050,18 @@ export default function ReviewResults() {
                                   </pre>
 
                                   {sub.compileError && (
-                                    <div className="p-3 bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs font-mono rounded-xl">
-                                      <span className="font-bold text-rose-400 block mb-1">Compiler Error:</span>
-                                      <pre className="whitespace-pre-wrap overflow-x-auto">{sub.compileError}</pre>
-                                    </div>
+                                    <TestCaseBox
+                                      label="Compiler Error:"
+                                      content={sub.compileError}
+                                      colorClass="text-rose-300"
+                                      bgClass="bg-rose-950/40"
+                                      borderClass="border-rose-900/60"
+                                      labelColorClass="text-rose-400"
+                                      toggleColorClass="text-rose-400 hover:text-rose-300"
+                                      maxLines={8}
+                                      maxChars={400}
+                                      copyLabel="Copied compiler error"
+                                    />
                                   )}
                                 </div>
                               )}

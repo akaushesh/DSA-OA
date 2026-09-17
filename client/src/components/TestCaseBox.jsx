@@ -7,6 +7,8 @@ export default function TestCaseBox({
   content,
   emptyPlaceholder = '<empty>',
   colorClass = 'text-slate-200',
+  labelColorClass = 'text-slate-400',
+  toggleColorClass = 'text-sky-400 hover:text-sky-300',
   bgClass = 'bg-[#050811]',
   borderClass = 'border-[#18233c]',
   maxChars = 250,
@@ -40,7 +42,7 @@ export default function TestCaseBox({
     <div className={`p-2.5 rounded-lg font-mono text-xs border ${bgClass} ${borderClass}`}>
       {/* Header with Label & Top-Right Copy Button */}
       <div className="flex items-center justify-between gap-2 mb-1">
-        <span className="text-slate-500 font-sans block text-[11px] font-semibold">
+        <span className={`${labelColorClass} font-sans block text-[11px] font-semibold`}>
           {label}
         </span>
         {hasContent && (
@@ -83,7 +85,7 @@ export default function TestCaseBox({
             <button
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-[10px] text-sky-400 hover:text-sky-300 font-sans font-semibold mt-1.5 inline-flex items-center gap-1 cursor-pointer"
+              className={`text-[10px] font-sans font-semibold mt-1.5 inline-flex items-center gap-1 cursor-pointer ${toggleColorClass}`}
             >
               <span>
                 {isExpanded

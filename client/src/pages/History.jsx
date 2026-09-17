@@ -7,7 +7,7 @@ import Navbar from '../components/Navbar';
 import Loader from '../components/Loader';
 import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
-
+import TestCaseBox from '../components/TestCaseBox';
 import ModalConfirm from '../components/ModalConfirm';
 import { getDifficultyPoints, calculateAttemptScoreBreakdown } from '../utils/scoring';
 
@@ -339,10 +339,18 @@ export default function History() {
 
                               {selectedCodeView.compileError && (
                                 <div className="mt-3">
-                                  <p className="text-xs font-bold text-rose-400 uppercase mb-1">Compiler Diagnostics</p>
-                                  <pre className="text-xs font-mono text-rose-300 bg-rose-950/30 border border-rose-900/50 p-3 rounded-xl whitespace-pre-wrap">
-                                    {selectedCodeView.compileError}
-                                  </pre>
+                                  <TestCaseBox
+                                    label="Compiler Diagnostics:"
+                                    content={selectedCodeView.compileError}
+                                    colorClass="text-rose-300"
+                                    bgClass="bg-rose-950/30"
+                                    borderClass="border-rose-900/50"
+                                    labelColorClass="text-rose-400"
+                                    toggleColorClass="text-rose-400 hover:text-rose-300"
+                                    maxLines={8}
+                                    maxChars={400}
+                                    copyLabel="Copied compiler diagnostics"
+                                  />
                                 </div>
                               )}
                             </div>
