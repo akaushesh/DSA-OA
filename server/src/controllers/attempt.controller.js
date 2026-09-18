@@ -7,6 +7,7 @@ import { Submission } from '../models/submission.model.js';
 import { User } from '../models/user.model.js';
 import { calculateAttemptScoreBreakdown, getDifficultyPoints, calculateProblemScore } from '../utils/scoring.js';
 import { runAllTestCases } from '../services/judge0.service.js';
+import { aggregateTopicsFromAttempts } from '../utils/topicAggregator.js';
 
 export const startAttempt = asyncHandler(async (req, res) => {
   const { questionSetId, timingMode, totalTimeLimit, preferredLanguage } = req.body;
@@ -154,6 +155,26 @@ export const myAttempts = asyncHandler(async (req, res) => {
     Attempt.countDocuments(filter),
   ]);
   return res.json(new ApiResponse(200, 'Attempts fetched', { attempts, total, page: Number(page), limit: Number(limit) }));
+});
+
+// Candidate: Aggregated topics and attempted questions across all past assessments
+export const getMyAttemptedTopics = asyncHandler(async (req, res) => {
+  const attempts = await Attempt.find({ userId: req.user._id })
+    .select('_id startedAt status score questionSetId submissions')
+    .populate({
+      path: 'questionSetId',
+      select: 'name category problems',
+      populate: { path: 'problems', select: 'title difficulty category tags' },
+    })
+    .populate({
+      path: 'submissions',
+      select: 'problemId score verdict passedTests totalTests submittedAt',
+    })
+    .sort({ startedAt: -1 })
+    .lean();
+
+  const aggregated = aggregateTopicsFromAttempts(attempts);
+  return res.json(new ApiResponse(200, 'Attempted topics fetched', aggregated));
 });
 
 // Admin: all attempts with live status counts and deep populates

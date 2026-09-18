@@ -7,6 +7,7 @@ import {
   deleteAttempt,
   getAttemptReview,
   myAttempts,
+  getMyAttemptedTopics,
   allAttempts,
   saveTimers,
   adjustAttemptTime,
@@ -22,6 +23,7 @@ router.post('/start', startAttempt);
 router.put('/:id/end', endAttempt);
 router.delete('/:id', deleteAttempt);
 router.get('/my', myAttempts);
+router.get('/my-topics', getMyAttemptedTopics);
 router.get('/all', verifyAdmin, allAttempts);
 router.post('/:id/adjust-time', verifyAdmin, adjustAttemptTime);
 router.post('/:id/reset', verifyAdmin, resetAttempt);

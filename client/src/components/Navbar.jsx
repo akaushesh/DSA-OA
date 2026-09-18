@@ -51,6 +51,18 @@ export default function Navbar() {
           Dashboard
         </Link>
 
+        {/* Topics */}
+        <Link
+          to="/topics"
+          className={`text-xs font-semibold transition px-3 py-1.5 rounded-lg ${
+            location.pathname === '/topics'
+              ? 'text-white bg-[#152038]'
+              : 'text-slate-300 hover:text-white'
+          }`}
+        >
+          Topics
+        </Link>
+
         {/* + Upload Set button */}
         <Link
           to="/upload"

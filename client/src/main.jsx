@@ -21,6 +21,10 @@ const router = createBrowserRouter([
         element: <Protected authentication>{L(() => import('./pages/Dashboard'))}</Protected>,
       },
       {
+        path: 'topics',
+        element: <Protected authentication>{L(() => import('./pages/TopicWise'))}</Protected>,
+      },
+      {
         path: 'upload',
         element: <Protected authentication>{L(() => import('./pages/admin/QuestionSetEditor'))}</Protected>,
       },

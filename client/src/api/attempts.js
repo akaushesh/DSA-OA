@@ -11,4 +11,5 @@ export const adjustAttemptTime = (id, data) => API.post(`/attempts/${id}/adjust-
 export const resetAttempt = (id) => API.post(`/attempts/${id}/reset`);
 export const stopAttempt = (id) => API.post(`/attempts/${id}/stop`);
 export const reevaluateAttempt = (id) => API.post(`/attempts/${id}/reevaluate`);
+export const getMyAttemptedTopics = () => API.get('/attempts/my-topics');
 
