@@ -48,10 +48,6 @@ const router = createBrowserRouter([
         path: 'review/:attemptId',
         element: <Protected authentication>{L(() => import('./pages/ReviewResults'))}</Protected>,
       },
-      {
-        path: 'history',
-        element: <Protected authentication>{L(() => import('./pages/History'))}</Protected>,
-      },
       // Admin monitoring & management routes (restricted to role: admin)
       {
         path: 'admin',

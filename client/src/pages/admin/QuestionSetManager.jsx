@@ -1,21 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getQuestionSets, deleteQuestionSet, reevaluateQuestionSet } from '../../api/questionsets';
 import Navbar from '../../components/Navbar';
+import Paginator from '../../components/Paginator';
 
 export default function QuestionSetManager() {
   const [sets, setSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reevaluatingId, setReevaluatingId] = useState(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 20;
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
-    getQuestionSets({ adminView: true, limit: 100 })
-      .then(r => setSets(r.data.statusCode?.sets || []))
+    getQuestionSets({ adminView: true, page, limit: PAGE_SIZE })
+      .then(r => {
+        const data = r.data.statusCode;
+        setSets(data?.sets || []);
+        setTotal(data?.total || 0);
+      })
       .finally(() => setLoading(false));
-  };
-  useEffect(load, []);
+  }, [page]);
+  useEffect(load, [load]);
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this question set?')) return;
@@ -100,6 +108,16 @@ export default function QuestionSetManager() {
                 </div>
               </div>
             ))}
+            <div className="p-4 bg-[#141424] border-t border-[#2d2d44]">
+              <Paginator
+                page={page}
+                total={total}
+                limit={PAGE_SIZE}
+                loading={loading}
+                onPrev={() => setPage((p) => Math.max(1, p - 1))}
+                onNext={() => setPage((p) => p + 1)}
+              />
+            </div>
           </div>
         )}
       </div>

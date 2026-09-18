@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
-import { getAttempt, deleteAttempt } from '../api/attempts';
+import { getAttempt, deleteAttempt, reevaluateAttempt } from '../api/attempts';
 import Navbar from '../components/Navbar';
 import Loader from '../components/Loader';
 import VerdictBadge from '../components/VerdictBadge';
@@ -13,6 +14,7 @@ import { calculateProblemScore, getDifficultyPoints, calculateAttemptScoreBreakd
 export default function ReviewResults() {
   const { attemptId } = useParams();
   const navigate = useNavigate();
+  const role = useSelector(s => s.role?.role || s.auth?.userData?.role);
 
   const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,6 +23,8 @@ export default function ReviewResults() {
   const [expandedSubMap, setExpandedSubMap] = useState({}); // { [subId]: 'tests' | 'code' | null }
   const [showProblemTCMap, setShowProblemTCMap] = useState({}); // { [problemId]: boolean }
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isReevaluateModalOpen, setIsReevaluateModalOpen] = useState(false);
+  const [reevaluating, setReevaluating] = useState(false);
 
   // Helper to extract full test case comparisons (visible & hidden) for a submission
   const getSubmissionTestDetails = (sub, problem) => {
@@ -361,6 +365,22 @@ export default function ReviewResults() {
     setIsDeleteModalOpen(true);
   };
 
+  const handleConfirmReevaluate = async () => {
+    setIsReevaluateModalOpen(false);
+    setReevaluating(true);
+    const toastId = toast.loading('Reevaluating test submissions & scores...');
+    try {
+      const res = await reevaluateAttempt(attemptId);
+      toast.success(res.data?.message || 'Test reevaluated successfully!', { id: toastId });
+      const updated = await getAttempt(attemptId);
+      setAttempt(updated.data?.statusCode?.attempt);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reevaluate test', { id: toastId });
+    } finally {
+      setReevaluating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0b132b] text-slate-100 font-sans pb-20">
       <Navbar />
@@ -378,7 +398,29 @@ export default function ReviewResults() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* ORDER REVALUATION BUTTON (ADMIN ONLY) */}
+            {role === 'admin' && (
+              <button
+                onClick={() => setIsReevaluateModalOpen(true)}
+                disabled={reevaluating}
+                className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-amber-950/50 cursor-pointer"
+                title="Order revaluation for this user's test"
+              >
+                {reevaluating ? (
+                  <>
+                    <span className="inline-block animate-spin text-xs">⏳</span>
+                    <span>Reevaluating...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔄</span>
+                    <span>Order Revaluation</span>
+                  </>
+                )}
+              </button>
+            )}
+
             {/* EXPORT REPORT BUTTON */}
             <button
               onClick={() => setShowExportModal(true)}
@@ -415,6 +457,17 @@ export default function ReviewResults() {
               <h2 className="text-2xl font-extrabold text-white mt-2">
                 {setInfo?.name || 'Assessment Set'}
               </h2>
+              {attempt?.userId && (
+                <div className="flex items-center gap-2 pt-1 text-xs text-slate-300">
+                  <span className="text-slate-400 font-medium">Candidate:</span>
+                  <span className="bg-[#18223a] border border-[#2a3656] text-sky-300 font-semibold px-2.5 py-0.5 rounded-md">
+                    {attempt.userId.fullName || attempt.userId.username}
+                  </span>
+                  {attempt.userId.email && (
+                    <span className="text-slate-400 font-mono text-[11px]">({attempt.userId.email})</span>
+                  )}
+                </div>
+              )}
               <p className="text-xs text-slate-400 font-mono mt-1">
                 Attempted on {new Date(attempt.startedAt).toLocaleDateString()} at {new Date(attempt.startedAt).toLocaleTimeString()}
               </p>
@@ -1206,6 +1259,17 @@ export default function ReviewResults() {
             toast.error(err.response?.data?.message || 'Failed to delete attempt', { id: toastId });
           }
         }}
+      />
+
+      <ModalConfirm
+        isOpen={isReevaluateModalOpen}
+        title="Order Test Revaluation?"
+        message={`Re-evaluate test results for ${attempt?.userId?.fullName || attempt?.userId?.username || 'this candidate'}? This will re-judge the candidate's last submission for every problem against test cases and recalculate scores.`}
+        confirmText="Order Revaluation"
+        cancelText="Cancel"
+        isDanger={false}
+        onCancel={() => setIsReevaluateModalOpen(false)}
+        onConfirm={handleConfirmReevaluate}
       />
     </div>
   );

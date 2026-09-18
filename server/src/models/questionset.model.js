@@ -8,7 +8,9 @@ const questionSetSchema = new Schema({
   timingMode: { type: String, enum: ['per_problem', 'collective'], default: 'collective' },
   totalTimeLimit: { type: Number, default: 3600 }, // seconds — used in collective mode
   isPublished: { type: Boolean, default: false },
-  createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User', index: true },
 }, { timestamps: true });
+
+questionSetSchema.index({ isPublished: 1, createdAt: -1 });
 
 export const QuestionSet = mongoose.model('QuestionSet', questionSetSchema, 'questionsets');

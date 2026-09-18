@@ -1,20 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getProblems, deleteProblem } from '../../api/problems';
 import Navbar from '../../components/Navbar';
 import DifficultyChip from '../../components/DifficultyChip';
+import Paginator from '../../components/Paginator';
 
 export default function ProblemManager() {
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 20;
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
-    getProblems({ limit: 100 })
-      .then(r => setProblems(r.data.statusCode?.problems || []))
+    getProblems({ page, limit: PAGE_SIZE })
+      .then(r => {
+        const data = r.data.statusCode;
+        setProblems(data?.problems || []);
+        setTotal(data?.total || 0);
+      })
       .finally(() => setLoading(false));
-  };
-  useEffect(load, []);
+  }, [page]);
+  useEffect(load, [load]);
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this problem?')) return;
@@ -70,6 +78,16 @@ export default function ProblemManager() {
                 </div>
               </div>
             ))}
+            <div className="p-4 bg-[#141424] border-t border-[#2d2d44]">
+              <Paginator
+                page={page}
+                total={total}
+                limit={PAGE_SIZE}
+                loading={loading}
+                onPrev={() => setPage((p) => Math.max(1, p - 1))}
+                onNext={() => setPage((p) => p + 1)}
+              />
+            </div>
           </div>
         )}
       </div>

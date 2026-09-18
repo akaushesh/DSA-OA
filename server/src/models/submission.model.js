@@ -29,4 +29,7 @@ const submissionSchema = new Schema({
   submittedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
+submissionSchema.index({ attemptId: 1, submittedAt: 1 });
+submissionSchema.index({ questionSetId: 1, submittedAt: -1 });
+
 export const Submission = mongoose.model('Submission', submissionSchema, 'submissions');

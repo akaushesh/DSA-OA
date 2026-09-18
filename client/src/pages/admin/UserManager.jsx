@@ -3,12 +3,16 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { listUsers, updateUserRole, getUserDetails } from '../../api/admin';
 import Navbar from '../../components/Navbar';
+import Paginator from '../../components/Paginator';
 
 export default function UserManager() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 20;
 
   // Detailed User Modal State
   const [detailModal, setDetailModal] = useState({
@@ -20,14 +24,23 @@ export default function UserManager() {
 
   const load = useCallback(() => {
     setLoading(true);
-    listUsers({ limit: 100, search: searchTerm || undefined, role: roleFilter !== 'all' ? roleFilter : undefined })
-      .then((r) => setUsers(r.data.statusCode?.users || []))
+    listUsers({
+      page,
+      limit: PAGE_SIZE,
+      search: searchTerm || undefined,
+      role: roleFilter !== 'all' ? roleFilter : undefined,
+    })
+      .then((r) => {
+        const data = r.data.statusCode;
+        setUsers(data?.users || []);
+        setTotal(data?.total || 0);
+      })
       .catch((err) => {
         console.error(err);
         toast.error('Failed to load users list');
       })
       .finally(() => setLoading(false));
-  }, [searchTerm, roleFilter]);
+  }, [page, searchTerm, roleFilter]);
 
   useEffect(() => {
     const timer = setTimeout(load, 250);
@@ -118,13 +131,16 @@ export default function UserManager() {
           {/* Role Filters */}
           <div className="flex bg-[#080d1a] p-1 rounded-xl w-full sm:w-auto">
             {[
-              { key: 'all', label: `All Users (${users.length})` },
+              { key: 'all', label: `All Users (${total || users.length})` },
               { key: 'user', label: 'Students' },
               { key: 'admin', label: 'Admins' },
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setRoleFilter(tab.key)}
+                onClick={() => {
+                  setRoleFilter(tab.key);
+                  setPage(1);
+                }}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex-1 sm:flex-initial ${
                   roleFilter === tab.key
                     ? 'bg-purple-600 text-white shadow-sm'
@@ -143,12 +159,18 @@ export default function UserManager() {
               type="text"
               placeholder="Search by username or name..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
               className="w-full bg-[#080d1a] border border-[#223255] text-white placeholder-slate-500 text-xs font-medium pl-8 pr-3 py-2 rounded-xl focus:outline-none focus:border-purple-500"
             />
             {searchTerm && (
               <button
-                onClick={() => setSearchTerm('')}
+                onClick={() => {
+                  setSearchTerm('');
+                  setPage(1);
+                }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
               >
                 ✕
@@ -255,6 +277,16 @@ export default function UserManager() {
                   </div>
                 );
               })}
+            </div>
+            <div className="p-4 bg-[#0d1424] border-t border-[#1f2c4b]">
+              <Paginator
+                page={page}
+                total={total}
+                limit={PAGE_SIZE}
+                loading={loading}
+                onPrev={() => setPage((p) => Math.max(1, p - 1))}
+                onNext={() => setPage((p) => p + 1)}
+              />
             </div>
           </div>
         )}

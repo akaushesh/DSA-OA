@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getStats } from '../../api/admin';
-import { allAttempts } from '../../api/attempts';
+import { getStats, getAttemptTrends } from '../../api/admin';
 import Navbar from '../../components/Navbar';
 import CategoryTrendsChart from '../../components/CategoryTrendsChart';
 
@@ -11,7 +10,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     getStats().then(r => setStats(r.data.statusCode)).catch(() => {});
-    allAttempts({ limit: 100 }).then(r => setAttempts(r.data.statusCode?.attempts || [])).catch(() => {});
+    getAttemptTrends({ limit: 30 }).then(r => setAttempts(r.data.statusCode?.attempts || [])).catch(() => {});
   }, []);
 
   const cards = [

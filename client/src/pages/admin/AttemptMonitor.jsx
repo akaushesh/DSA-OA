@@ -12,10 +12,14 @@ import {
 import Navbar from '../../components/Navbar';
 import { calculateAttemptScoreBreakdown, getDifficultyPoints, calculateProblemScore } from '../../utils/scoring';
 import { reevaluateQuestionSet } from '../../api/questionsets';
+import Paginator from '../../components/Paginator';
 
 export default function AttemptMonitor() {
   const [attempts, setAttempts] = useState([]);
   const [counts, setCounts] = useState({ total: 0, active: 0, completed: 0, timedOut: 0 });
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -32,13 +36,30 @@ export default function AttemptMonitor() {
   const [actionModal, setActionModal] = useState({ isOpen: false, type: '', attempt: null, title: '', message: '' });
 
   const timerRef = useRef(null);
+  // ponytail: search is debounced 400ms server-side; no client-side filter needed since allAttempts now accepts search param
+  const searchDebounceRef = useRef(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const fetchAttempts = useCallback(async (showIndicator = false) => {
+  const handleSearchChange = (val) => {
+    setSearchTerm(val);
+    clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setDebouncedSearch(val);
+      setPage(1);
+    }, 400);
+  };
+
+  const fetchAttempts = useCallback(async (showIndicator = false, targetPage = page) => {
     if (showIndicator) setRefreshing(true);
     try {
-      const res = await allAttempts({ limit: 100 });
+      const params = { limit: PAGE_SIZE, page: targetPage };
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (selectedSetFilter !== 'all') params.questionSetId = selectedSetFilter;
+      if (debouncedSearch) params.search = debouncedSearch;
+      const res = await allAttempts(params);
       const data = res.data.statusCode;
       setAttempts(data?.attempts || []);
+      setTotal(data?.total || 0);
       if (data?.counts) setCounts(data.counts);
     } catch (err) {
       console.error(err);
@@ -47,7 +68,7 @@ export default function AttemptMonitor() {
       setLoading(false);
       if (showIndicator) setRefreshing(false);
     }
-  }, []);
+  }, [page, statusFilter, selectedSetFilter, debouncedSearch]);
 
   // Initial load
   useEffect(() => {
@@ -171,33 +192,11 @@ export default function AttemptMonitor() {
     };
   }, []);
 
-  // Filtered attempts list
-  const filteredAttempts = useMemo(() => {
-    return attempts.filter((a) => {
-      // Status filter
-      if (statusFilter !== 'all' && a.status !== statusFilter) return false;
+  // Server filters status/questionSetId/search — attempts from API are already filtered
+  // ponytail: uniqueQuestionSets built from current page; sufficient for dropdown since admin can see all sets on first page
+  const filteredAttempts = attempts;
 
-      // Question Set filter
-      if (selectedSetFilter !== 'all') {
-        const setId = (a.questionSetId?._id || a.questionSetId)?.toString();
-        if (setId !== selectedSetFilter) return false;
-      }
-
-      // Search term
-      if (searchTerm.trim()) {
-        const query = searchTerm.toLowerCase();
-        const username = (a.userId?.username || '').toLowerCase();
-        const fullName = (a.userId?.fullName || '').toLowerCase();
-        const email = (a.userId?.email || '').toLowerCase();
-        const setName = (a.questionSetId?.name || '').toLowerCase();
-        return username.includes(query) || fullName.includes(query) || email.includes(query) || setName.includes(query);
-      }
-
-      return true;
-    });
-  }, [attempts, statusFilter, selectedSetFilter, searchTerm]);
-
-  // Unique question sets for filter dropdown
+  // Unique question sets for filter dropdown (derived from loaded attempts)
   const uniqueQuestionSets = useMemo(() => {
     const map = new Map();
     attempts.forEach((a) => {
@@ -370,7 +369,10 @@ export default function AttemptMonitor() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {/* Active Live */}
           <div
-            onClick={() => setStatusFilter(statusFilter === 'in_progress' ? 'all' : 'in_progress')}
+            onClick={() => {
+              setStatusFilter(statusFilter === 'in_progress' ? 'all' : 'in_progress');
+              setPage(1);
+            }}
             className={`p-4 rounded-2xl border transition cursor-pointer ${
               statusFilter === 'in_progress'
                 ? 'bg-emerald-950/80 border-emerald-500 ring-2 ring-emerald-500/40'
@@ -387,7 +389,10 @@ export default function AttemptMonitor() {
 
           {/* Completed */}
           <div
-            onClick={() => setStatusFilter(statusFilter === 'completed' ? 'all' : 'completed')}
+            onClick={() => {
+              setStatusFilter(statusFilter === 'completed' ? 'all' : 'completed');
+              setPage(1);
+            }}
             className={`p-4 rounded-2xl border transition cursor-pointer ${
               statusFilter === 'completed'
                 ? 'bg-blue-950/80 border-blue-500 ring-2 ring-blue-500/40'
@@ -401,7 +406,10 @@ export default function AttemptMonitor() {
 
           {/* Timed Out */}
           <div
-            onClick={() => setStatusFilter(statusFilter === 'timed_out' ? 'all' : 'timed_out')}
+            onClick={() => {
+              setStatusFilter(statusFilter === 'timed_out' ? 'all' : 'timed_out');
+              setPage(1);
+            }}
             className={`p-4 rounded-2xl border transition cursor-pointer ${
               statusFilter === 'timed_out'
                 ? 'bg-rose-950/80 border-rose-500 ring-2 ring-rose-500/40'
@@ -415,7 +423,10 @@ export default function AttemptMonitor() {
 
           {/* Total Recorded */}
           <div
-            onClick={() => setStatusFilter('all')}
+            onClick={() => {
+              setStatusFilter('all');
+              setPage(1);
+            }}
             className={`p-4 rounded-2xl border transition cursor-pointer ${
               statusFilter === 'all'
                 ? 'bg-purple-950/80 border-purple-500 ring-2 ring-purple-500/40'
@@ -440,7 +451,10 @@ export default function AttemptMonitor() {
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setStatusFilter(tab.key)}
+                onClick={() => {
+                  setStatusFilter(tab.key);
+                  setPage(1);
+                }}
                 className={`flex-1 md:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${
                   statusFilter === tab.key
                     ? 'bg-purple-600 text-white shadow-sm'
@@ -458,7 +472,10 @@ export default function AttemptMonitor() {
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <select
                 value={selectedSetFilter}
-                onChange={(e) => setSelectedSetFilter(e.target.value)}
+                onChange={(e) => {
+                  setSelectedSetFilter(e.target.value);
+                  setPage(1);
+                }}
                 className="w-full sm:w-48 bg-[#080d1a] border border-[#223255] text-slate-300 text-xs font-semibold px-3 py-2 rounded-xl focus:outline-none focus:border-purple-500"
               >
                 <option value="all">All Question Sets</option>
@@ -495,12 +512,12 @@ export default function AttemptMonitor() {
                 type="text"
                 placeholder="Search user, name, test..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full bg-[#080d1a] border border-[#223255] text-white placeholder-slate-500 text-xs font-medium pl-8 pr-3 py-2 rounded-xl focus:outline-none focus:border-purple-500"
               />
               {searchTerm && (
                 <button
-                  onClick={() => setSearchTerm('')}
+                  onClick={() => handleSearchChange('')}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
                 >
                   ✕
@@ -773,6 +790,14 @@ export default function AttemptMonitor() {
                 </div>
               );
             })}
+            <Paginator
+              page={page}
+              total={total}
+              limit={PAGE_SIZE}
+              loading={loading || refreshing}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => p + 1)}
+            />
           </div>
         )}
       </div>

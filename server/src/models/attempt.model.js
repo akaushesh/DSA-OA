@@ -16,4 +16,8 @@ const attemptSchema = new Schema({
   problemTimerElapsedSec: { type: Map, of: Number, default: {} },
 }, { timestamps: true });
 
+attemptSchema.index({ userId: 1, startedAt: -1 });
+attemptSchema.index({ questionSetId: 1, status: 1 });
+attemptSchema.index({ status: 1, startedAt: -1 });
+
 export const Attempt = mongoose.model('Attempt', attemptSchema, 'attempts');

@@ -4,7 +4,9 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { Attempt } from '../models/attempt.model.js';
 import { QuestionSet } from '../models/questionset.model.js';
 import { Submission } from '../models/submission.model.js';
-import { calculateAttemptScoreBreakdown, getDifficultyPoints } from '../utils/scoring.js';
+import { User } from '../models/user.model.js';
+import { calculateAttemptScoreBreakdown, getDifficultyPoints, calculateProblemScore } from '../utils/scoring.js';
+import { runAllTestCases } from '../services/judge0.service.js';
 
 export const startAttempt = asyncHandler(async (req, res) => {
   const { questionSetId, timingMode, totalTimeLimit, preferredLanguage } = req.body;
@@ -87,6 +89,7 @@ export const deleteAttempt = asyncHandler(async (req, res) => {
 
 export const getAttemptReview = asyncHandler(async (req, res) => {
   const attempt = await Attempt.findById(req.params.id)
+    .populate('userId', 'username fullName email')
     .populate({
       path: 'questionSetId',
       select: 'name category problems timingMode totalTimeLimit description',
@@ -101,7 +104,8 @@ export const getAttemptReview = asyncHandler(async (req, res) => {
     });
 
   if (!attempt) throw new ApiError(404, 'Attempt not found');
-  if (attempt.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+  const attemptOwnerId = (attempt.userId?._id || attempt.userId)?.toString();
+  if (attemptOwnerId !== req.user._id.toString() && req.user.role !== 'admin') {
     throw new ApiError(403, 'Forbidden');
   }
 
@@ -134,48 +138,64 @@ export const getAttemptReview = asyncHandler(async (req, res) => {
 });
 
 export const myAttempts = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 20 } = req.query;
-  const attempts = await Attempt.find({ userId: req.user._id })
-    .populate({
-      path: 'questionSetId',
-      select: 'name category problems timingMode totalTimeLimit',
-      populate: { path: 'problems', select: 'title difficulty' },
-    })
-    .populate('submissions', 'problemId score verdict passedTests totalTests submittedAt')
-    .sort({ startedAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(Number(limit));
-  return res.json(new ApiResponse(200, 'Attempts fetched', { attempts }));
+  const { page = 1, limit = 10 } = req.query;
+  const filter = { userId: req.user._id };
+  const [attempts, total] = await Promise.all([
+    Attempt.find(filter)
+      .populate({
+        path: 'questionSetId',
+        select: 'name category problems timingMode totalTimeLimit',
+        populate: { path: 'problems', select: 'title difficulty' },
+      })
+      .populate('submissions', 'problemId score verdict passedTests totalTests submittedAt')
+      .sort({ startedAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit)),
+    Attempt.countDocuments(filter),
+  ]);
+  return res.json(new ApiResponse(200, 'Attempts fetched', { attempts, total, page: Number(page), limit: Number(limit) }));
 });
 
 // Admin: all attempts with live status counts and deep populates
 export const allAttempts = asyncHandler(async (req, res) => {
-  const { userId, questionSetId, status, page = 1, limit = 50 } = req.query;
+  const { userId, questionSetId, status, search, page = 1, limit = 20 } = req.query;
   const filter = {};
   if (userId) filter.userId = userId;
   if (questionSetId) filter.questionSetId = questionSetId;
   if (status && status !== 'all') filter.status = status;
+  // server-side user search: match by username/fullName/email
+  if (search) {
+    const matchingUsers = await User.find({
+      $or: [
+        { username: { $regex: search, $options: 'i' } },
+        { fullName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ],
+    }).select('_id');
+    filter.userId = { $in: matchingUsers.map(u => u._id) };
+  }
 
-  const attempts = await Attempt.find(filter)
-    .populate('userId', 'username fullName email')
-    .populate({
-      path: 'questionSetId',
-      select: 'name category timingMode totalTimeLimit problems description',
-      populate: {
-        path: 'problems',
-        select: 'title difficulty category timeLimit starterCode',
-      },
-    })
-    .populate({
-      path: 'submissions',
-      select: 'problemId score language code status verdict passedTests totalTests runtime memory submittedAt',
-    })
-    .sort({ startedAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(Number(limit));
-
-  const total = await Attempt.countDocuments(filter);
-  const [activeCount, completedCount, timedOutCount] = await Promise.all([
+  const [attempts, total, activeCount, completedCount, timedOutCount] = await Promise.all([
+    Attempt.find(filter)
+      .populate('userId', 'username fullName email')
+      .populate({
+        path: 'questionSetId',
+        select: 'name category timingMode totalTimeLimit problems description',
+        populate: {
+          path: 'problems',
+          select: 'title difficulty category timeLimit',
+          // ponytail: starterCode stripped from list; only needed in editor, not admin monitor
+        },
+      })
+      .populate({
+        path: 'submissions',
+        // ponytail: code excluded from list payload; saves ~80-90% payload size on each auto-refresh tick
+        select: 'problemId score language status verdict passedTests totalTests runtime memory submittedAt',
+      })
+      .sort({ startedAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit)),
+    Attempt.countDocuments(filter),
     Attempt.countDocuments({ status: 'in_progress' }),
     Attempt.countDocuments({ status: 'completed' }),
     Attempt.countDocuments({ status: 'timed_out' }),
@@ -184,8 +204,10 @@ export const allAttempts = asyncHandler(async (req, res) => {
   return res.json(new ApiResponse(200, 'Attempts fetched', {
     attempts,
     total,
+    page: Number(page),
+    limit: Number(limit),
     counts: {
-      total,
+      total: await Attempt.countDocuments({}),
       active: activeCount,
       completed: completedCount,
       timedOut: timedOutCount,
@@ -272,3 +294,134 @@ export const saveTimers = asyncHandler(async (req, res) => {
   if (!attempt) throw new ApiError(404, 'Attempt not found');
   res.json(new ApiResponse(200, 'Timers saved', {}));
 });
+
+// Admin: Reevaluate single candidate attempt using the last attempt made DURING test time
+export const reevaluateAttempt = asyncHandler(async (req, res) => {
+  const attempt = await Attempt.findById(req.params.id)
+    .populate({
+      path: 'questionSetId',
+      populate: { path: 'problems' },
+    })
+    .populate('userId', 'username fullName email');
+
+  if (!attempt) throw new ApiError(404, 'Attempt not found');
+
+  const set = attempt.questionSetId;
+  const problems = (set?.problems || []).filter(Boolean);
+  const problemMap = new Map();
+  problems.forEach((p) => {
+    problemMap.set(p._id.toString(), p);
+  });
+
+  // Find all submissions associated with this attempt
+  const submissions = await Submission.find({
+    $or: [
+      { attemptId: attempt._id },
+      { _id: { $in: attempt.submissions || [] } },
+    ],
+  }).sort({ submittedAt: 1, createdAt: 1 });
+
+  const attemptStart = new Date(attempt.startedAt || attempt.createdAt || 0).getTime();
+  const attemptEnd = attempt.endedAt
+    ? new Date(attempt.endedAt).getTime() + 15000
+    : attemptStart + (attempt.totalTimeLimit || 3600) * 1000 + 15000;
+
+  // Filter strictly to in-test submissions
+  let inTestSubs = submissions.filter((s) => {
+    const sTime = new Date(s.submittedAt || s.createdAt || 0).getTime();
+    return sTime >= attemptStart - 5000 && sTime <= attemptEnd;
+  });
+
+  // ponytail: fallback to all attempt submissions if none matched window (e.g. timestamps shifted)
+  if (inTestSubs.length === 0 && submissions.length > 0) {
+    inTestSubs = submissions;
+  }
+
+  const subsByProblem = {};
+  inTestSubs.forEach((s) => {
+    const pId = (s.problemId?._id || s.problemId)?.toString();
+    if (!pId) return;
+    if (!subsByProblem[pId]) subsByProblem[pId] = [];
+    subsByProblem[pId].push(s);
+  });
+
+  Object.keys(subsByProblem).forEach((pId) => {
+    subsByProblem[pId].sort((a, b) => {
+      const timeA = new Date(a.submittedAt || a.createdAt || 0).getTime();
+      const timeB = new Date(b.submittedAt || b.createdAt || 0).getTime();
+      return timeA - timeB;
+    });
+  });
+
+  let submissionsRejudged = 0;
+  let totalScore = 0;
+  let maxPossibleScore = 0;
+
+  for (const p of problems) {
+    const pId = p._id.toString();
+    const rules = getDifficultyPoints(p.difficulty);
+    maxPossibleScore += rules.totalPoints;
+
+    const probSubs = subsByProblem[pId] || [];
+    if (probSubs.length > 0) {
+      const lastSub = probSubs[probSubs.length - 1];
+
+      if (lastSub.code && p.testCases && p.testCases.length > 0) {
+        try {
+          const judgeRes = await runAllTestCases({
+            language: lastSub.language,
+            code: lastSub.code,
+            testCases: p.testCases,
+            timeLimit: Math.ceil((p.timeLimit || 1800) / 1000) || 2,
+            memoryLimit: p.memoryLimit || 256,
+          });
+
+          const newScore = calculateProblemScore(p.difficulty, judgeRes.passedTests, judgeRes.totalTests);
+          lastSub.verdict = judgeRes.verdict;
+          lastSub.passedTests = judgeRes.passedTests;
+          lastSub.totalTests = judgeRes.totalTests;
+          lastSub.runtime = judgeRes.runtime;
+          lastSub.memory = judgeRes.memory;
+          lastSub.compileError = judgeRes.compileError;
+          lastSub.testResults = judgeRes.testResults;
+          lastSub.score = newScore;
+          await lastSub.save();
+          submissionsRejudged++;
+        } catch (err) {
+          console.error('Judge0 re-evaluation error for sub', lastSub._id, err);
+          lastSub.score = calculateProblemScore(p.difficulty, lastSub.passedTests, lastSub.totalTests);
+          await lastSub.save();
+        }
+      } else {
+        lastSub.score = calculateProblemScore(p.difficulty, lastSub.passedTests, lastSub.totalTests);
+        await lastSub.save();
+      }
+
+      totalScore += lastSub.score;
+    }
+  }
+
+  // ponytail: ensure other submissions have calculated scores with current rules
+  for (const s of inTestSubs) {
+    const p = problemMap.get((s.problemId?._id || s.problemId)?.toString());
+    if (p && (!s.score || s.score === 0)) {
+      s.score = calculateProblemScore(p.difficulty, s.passedTests, s.totalTests);
+      await s.save();
+    }
+  }
+
+  attempt.submissions = inTestSubs.map((s) => s._id);
+  attempt.score = totalScore;
+  attempt.maxPossibleScore = maxPossibleScore;
+  await attempt.save();
+
+  return res.json(
+    new ApiResponse(200, `Test reevaluated successfully. Re-judged ${submissionsRejudged} submission(s).`, {
+      attemptId: attempt._id,
+      submissionsRejudged,
+      score: totalScore,
+      maxPossibleScore,
+    })
+  );
+});
+

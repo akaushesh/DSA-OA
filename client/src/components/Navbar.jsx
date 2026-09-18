@@ -69,18 +69,6 @@ export default function Navbar() {
           </Link>
         )}
 
-        {/* History */}
-        <Link
-          to="/history"
-          className={`text-xs font-semibold transition px-2.5 py-1.5 rounded-lg ${
-            location.pathname === '/history'
-              ? 'text-white bg-[#152038]'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          History
-        </Link>
-
         {/* User Pill */}
         <div className="flex items-center gap-2 pl-2 border-l border-[#1f2c4b]">
           <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-inner">

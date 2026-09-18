@@ -10,3 +10,5 @@ export const saveTimers = (id, data) => API.patch(`/attempts/${id}/timers`, data
 export const adjustAttemptTime = (id, data) => API.post(`/attempts/${id}/adjust-time`, data);
 export const resetAttempt = (id) => API.post(`/attempts/${id}/reset`);
 export const stopAttempt = (id) => API.post(`/attempts/${id}/stop`);
+export const reevaluateAttempt = (id) => API.post(`/attempts/${id}/reevaluate`);
+

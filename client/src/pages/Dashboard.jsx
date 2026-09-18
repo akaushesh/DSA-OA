@@ -13,6 +13,9 @@ const CATEGORIES = ['All', 'General', 'Graphs', 'Arrays', 'Strings', 'Trees', 'D
 export default function Dashboard() {
   const [sets, setSets] = useState([]);
   const [attempts, setAttempts] = useState([]);
+  const [attemptsTotal, setAttemptsTotal] = useState(0);
+  const [attemptsPage, setAttemptsPage] = useState(1);
+  const [loadingMoreAttempts, setLoadingMoreAttempts] = useState(false);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,12 +30,15 @@ export default function Dashboard() {
     setLoading(true);
     Promise.all([
       getQuestionSets({ limit: 100 }),
-      myAttempts({ limit: 100 }),
+      myAttempts({ limit: 10, page: 1 }),
     ])
       .then(([setsRes, attemptsRes]) => {
-        const atts = attemptsRes.data.statusCode?.attempts || [];
+        const data = attemptsRes.data.statusCode;
+        const atts = data?.attempts || [];
         setSets(setsRes.data.statusCode?.sets || []);
         setAttempts(atts);
+        setAttemptsTotal(data?.total || atts.length);
+        setAttemptsPage(1);
 
         // If user is a student and has an ongoing test in progress, always redirect to it
         if (role !== 'admin') {
@@ -51,6 +57,21 @@ export default function Dashboard() {
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleLoadMoreAttempts = async () => {
+    setLoadingMoreAttempts(true);
+    const nextPage = attemptsPage + 1;
+    try {
+      const res = await myAttempts({ limit: 10, page: nextPage });
+      const more = res.data.statusCode?.attempts || [];
+      setAttempts(prev => [...prev, ...more]);
+      setAttemptsPage(nextPage);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMoreAttempts(false);
+    }
+  };
 
   // Filtered Question Sets
   const filteredSets = useMemo(() => {
@@ -163,7 +184,7 @@ export default function Dashboard() {
               TOTAL ATTEMPTS
             </span>
             <div className="text-3xl md:text-4xl font-extrabold text-white">
-              {totalAttemptsCount}
+              {attemptsTotal}
             </div>
             <span className="text-xs text-slate-400 mt-1 block">
               tests taken
@@ -279,10 +300,10 @@ export default function Dashboard() {
         </div>
 
         {/* SPLIT 2-COLUMN SECTION: AVAILABLE SETS (LEFT) & ATTEMPT HISTORY (RIGHT) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
           
           {/* LEFT COLUMN: AVAILABLE PRACTICE SETS */}
-          <div className="space-y-4">
+          <div className="space-y-4 flex flex-col">
             <div className="flex items-center justify-between pb-2 border-b border-[#1e2a47]">
               <div className="flex items-center gap-2">
                 <span className="text-blue-500 text-base">●</span>
@@ -296,11 +317,11 @@ export default function Dashboard() {
             </div>
 
             {loading ? (
-              <div className="p-12 text-center text-slate-500 text-xs animate-pulse">
+              <div className="p-12 text-center text-slate-500 text-xs animate-pulse flex-1 flex items-center justify-center">
                 Loading available sets...
               </div>
             ) : filteredSets.length === 0 ? (
-              <div className="p-10 text-center bg-[#11192e] border border-[#1e2a47] rounded-2xl">
+              <div className="p-10 text-center bg-[#11192e] border border-[#1e2a47] rounded-2xl flex-1 flex flex-col items-center justify-center">
                 <div className="text-3xl mb-2">📦</div>
                 <p className="text-white font-semibold text-sm mb-1">No Practice Sets Found</p>
                 <p className="text-slate-400 text-xs mb-4">Upload your first JSON question set to get started.</p>
@@ -312,7 +333,7 @@ export default function Dashboard() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-[780px] overflow-y-auto pr-2">
                 {filteredSets.map(set => (
                   <div
                     key={set._id}
@@ -388,7 +409,7 @@ export default function Dashboard() {
           </div>
 
           {/* RIGHT COLUMN: YOUR ATTEMPT HISTORY */}
-          <div className="space-y-4">
+          <div className="space-y-4 flex flex-col">
             <div className="flex items-center justify-between pb-2 border-b border-[#1e2a47]">
               <div className="flex items-center gap-2">
                 <span className="text-emerald-500 text-base">●</span>
@@ -402,17 +423,17 @@ export default function Dashboard() {
             </div>
 
             {loading ? (
-              <div className="p-12 text-center text-slate-500 text-xs animate-pulse">
+              <div className="p-12 text-center text-slate-500 text-xs animate-pulse flex-1 flex items-center justify-center">
                 Loading attempt history...
               </div>
             ) : filteredAttempts.length === 0 ? (
-              <div className="p-10 text-center bg-[#11192e] border border-[#1e2a47] rounded-2xl">
+              <div className="p-10 text-center bg-[#11192e] border border-[#1e2a47] rounded-2xl flex-1 flex flex-col items-center justify-center">
                 <div className="text-3xl mb-2">🎯</div>
                 <p className="text-white font-semibold text-sm mb-1">No Tests Taken Yet</p>
                 <p className="text-slate-400 text-xs">Choose a practice set from the left to begin your first test session.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-[780px] overflow-y-auto pr-2">
                 {filteredAttempts.map(a => {
                   const setInfo = a.questionSetId;
                   const isCompleted = a.status === 'completed';
@@ -469,6 +490,20 @@ export default function Dashboard() {
                   );
                 })}
               </div>
+            )}
+            {/* Load more attempts */}
+            {attempts.length < attemptsTotal && !loading && (
+              <button
+                onClick={handleLoadMoreAttempts}
+                disabled={loadingMoreAttempts}
+                className="w-full mt-3 py-2.5 text-xs font-bold text-sky-400 border border-sky-800/60 bg-sky-950/20 hover:bg-sky-950/40 rounded-2xl transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loadingMoreAttempts ? (
+                  <><span className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" /> Loading...</>
+                ) : (
+                  `Load more (${attemptsTotal - attempts.length} remaining)`
+                )}
+              </button>
             )}
           </div>
 

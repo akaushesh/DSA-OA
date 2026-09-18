@@ -20,7 +20,7 @@ export const getStats = asyncHandler(async (req, res) => {
 });
 
 export const listUsers = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 50, search, role } = req.query;
+  const { page = 1, limit = 20, search, role } = req.query;
   const filter = {};
   if (role && role !== 'all') filter.role = role;
   if (search) {
@@ -30,33 +30,45 @@ export const listUsers = asyncHandler(async (req, res) => {
     ];
   }
 
-  const users = await User.find(filter)
-    .select('-password -refreshToken')
-    .sort({ createdAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(Number(limit));
+  const [users, total] = await Promise.all([
+    User.find(filter)
+      .select('-password -refreshToken')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit)),
+    User.countDocuments(filter),
+  ]);
 
-  // Quick stats per user
-  const usersWithStats = await Promise.all(
-    users.map(async (u) => {
-      const [attemptsCount, activeAttemptsCount, setsCount] = await Promise.all([
-        Attempt.countDocuments({ userId: u._id }),
-        Attempt.countDocuments({ userId: u._id, status: 'in_progress' }),
-        QuestionSet.countDocuments({ createdBy: u._id }),
-      ]);
-      return {
-        ...u.toObject(),
-        stats: {
-          attemptsCount,
-          activeAttemptsCount,
-          setsCount,
-        },
-      };
-    })
-  );
+  // ponytail: fix N+1 — was O(N×3) DB round trips; now 2 aggregations regardless of page size
+  const userIds = users.map(u => u._id);
+  const [attemptStats, setStats] = await Promise.all([
+    Attempt.aggregate([
+      { $match: { userId: { $in: userIds } } },
+      { $group: {
+        _id: '$userId',
+        attemptsCount: { $sum: 1 },
+        activeAttemptsCount: { $sum: { $cond: [{ $eq: ['$status', 'in_progress'] }, 1, 0] } },
+      }},
+    ]),
+    QuestionSet.aggregate([
+      { $match: { createdBy: { $in: userIds } } },
+      { $group: { _id: '$createdBy', setsCount: { $sum: 1 } } },
+    ]),
+  ]);
 
-  const total = await User.countDocuments(filter);
-  return res.json(new ApiResponse(200, 'Users fetched', { users: usersWithStats, total }));
+  const attemptMap = Object.fromEntries(attemptStats.map(s => [s._id.toString(), s]));
+  const setMap = Object.fromEntries(setStats.map(s => [s._id.toString(), s]));
+
+  const usersWithStats = users.map(u => ({
+    ...u.toObject(),
+    stats: {
+      attemptsCount: attemptMap[u._id.toString()]?.attemptsCount || 0,
+      activeAttemptsCount: attemptMap[u._id.toString()]?.activeAttemptsCount || 0,
+      setsCount: setMap[u._id.toString()]?.setsCount || 0,
+    },
+  }));
+
+  return res.json(new ApiResponse(200, 'Users fetched', { users: usersWithStats, total, page: Number(page), limit: Number(limit) }));
 });
 
 export const getUserDetails = asyncHandler(async (req, res) => {
@@ -87,7 +99,6 @@ export const getUserDetails = asyncHandler(async (req, res) => {
   const stoppedAttempts = attempts.filter((a) => a.status === 'stopped_by_admin');
   const acSubmissions = submissions.filter((s) => s.verdict === 'AC');
 
-  // Overall accuracy across attempts
   let totalProblemsInAttempts = 0;
   let totalSolvedProblems = 0;
   attempts.forEach((a) => {
@@ -127,4 +138,16 @@ export const updateUserRole = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password -refreshToken');
   if (!user) throw new ApiError(404, 'User not found');
   return res.json(new ApiResponse(200, 'Role updated', { user }));
+});
+
+// Lightweight endpoint for AdminDashboard chart — no code, no testResults, just scores + category
+export const getAttemptTrends = asyncHandler(async (req, res) => {
+  const { limit = 30 } = req.query;
+  const attempts = await Attempt.find({ status: { $ne: 'in_progress' } })
+    .select('userId questionSetId score maxPossibleScore startedAt status')
+    .populate('userId', 'username')
+    .populate('questionSetId', 'name category')
+    .sort({ startedAt: -1 })
+    .limit(Number(limit));
+  return res.json(new ApiResponse(200, 'Trends fetched', { attempts }));
 });
