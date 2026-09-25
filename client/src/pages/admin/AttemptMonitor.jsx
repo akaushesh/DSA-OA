@@ -13,6 +13,7 @@ import Navbar from '../../components/Navbar';
 import { calculateAttemptScoreBreakdown, getDifficultyPoints, calculateProblemScore } from '../../utils/scoring';
 import { reevaluateQuestionSet } from '../../api/questionsets';
 import Paginator from '../../components/Paginator';
+import { getSubmission } from '../../api/submissions';
 
 export default function AttemptMonitor() {
   const [attempts, setAttempts] = useState([]);
@@ -31,6 +32,7 @@ export default function AttemptMonitor() {
   const [inspectAttempt, setInspectAttempt] = useState(null);
   const [inspectTab, setInspectTab] = useState('problems'); // 'problems' | 'submissions'
   const [selectedSubmissionCode, setSelectedSubmissionCode] = useState(null);
+  const [submissionLoading, setSubmissionLoading] = useState(false);
 
   const [timeAdjustModal, setTimeAdjustModal] = useState({ isOpen: false, attempt: null, problemId: '', minutes: 5 });
   const [actionModal, setActionModal] = useState({ isOpen: false, type: '', attempt: null, title: '', message: '' });
@@ -1052,7 +1054,19 @@ export default function AttemptMonitor() {
                           return (
                             <div
                               key={sub._id || sIdx}
-                              onClick={() => setSelectedSubmissionCode(sub)}
+                              onClick={async () => {
+                                if (selectedSubmissionCode?._id === sub._id) return;
+                                setSelectedSubmissionCode({ ...sub }); // show metadata immediately
+                                setSubmissionLoading(true);
+                                try {
+                                  const res = await getSubmission(sub._id);
+                                  setSelectedSubmissionCode(res.data.statusCode.submission);
+                                } catch {
+                                  toast.error('Failed to load submission code');
+                                } finally {
+                                  setSubmissionLoading(false);
+                                }
+                              }}
                               className={`p-3 rounded-xl border transition cursor-pointer text-xs ${
                                 isSelected
                                   ? 'bg-purple-950/60 border-purple-500 shadow'
@@ -1095,7 +1109,9 @@ export default function AttemptMonitor() {
                               </span>
                             </div>
                             <pre className="flex-1 overflow-auto font-mono text-xs text-slate-200 bg-[#0d1424] p-4 rounded-xl leading-relaxed whitespace-pre-wrap">
-                              {selectedSubmissionCode.code || '// No code content captured'}
+                              {submissionLoading
+                                ? '// Loading code...'
+                                : selectedSubmissionCode.code || '// No code content captured'}
                             </pre>
                           </>
                         ) : (
