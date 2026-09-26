@@ -1,1 +1,25 @@
-{"0": "Admin Controller Layer", "1": "Admin UI Pages", "2": "Attempt Monitor & API", "3": "Attempt Controller Logic", "4": "Client Dependencies & Config", "5": "Auth State & User Attempts", "6": "Server Dependencies & Config", "7": "Submission Controller", "8": "Category Trends Chart", "9": "Auth Service & Token Mgmt", "10": "Topic Aggregator Utility", "11": "Scoring Test Utilities", "12": "Starter Code Tests", "13": "Client Scoring Utilities", "14": "Server Scoring Utilities", "15": "DB & Server Entry Points", "16": "Dev Start Scripts", "17": "Client Vercel Config", "18": "Timer Component", "19": "Home Page", "20": "Starter Code Normalizer", "21": "ESLint Config", "22": "Vite Config"}
+{
+  "0": "Admin Controller Layer",
+  "1": "Admin UI Pages",
+  "2": "Attempt Monitor & API",
+  "3": "Attempt Controller Logic",
+  "4": "Client Dependencies & Config",
+  "5": "Auth State & User Attempts",
+  "6": "Server Dependencies & Config",
+  "7": "Submission Controller",
+  "8": "Category Trends Chart",
+  "9": "Auth Service & Token Mgmt",
+  "10": "Topic Aggregator Utility",
+  "11": "Scoring Test Utilities",
+  "12": "Starter Code Tests",
+  "13": "Client Scoring Utilities",
+  "14": "Server Scoring Utilities",
+  "15": "DB & Server Entry Points",
+  "16": "Dev Start Scripts",
+  "17": "Client Vercel Config",
+  "18": "Timer Component",
+  "19": "Home Page",
+  "20": "Starter Code Normalizer",
+  "21": "ESLint Config",
+  "22": "Vite Config"
+}
