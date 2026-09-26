@@ -126,7 +126,8 @@ export const getAttemptReview = asyncHandler(async (req, res) => {
   if (attempt.questionSetId?.problems && inTestSubmissions.length > 0) {
     scoreBreakdown = calculateAttemptScoreBreakdown(
       attempt.questionSetId.problems,
-      inTestSubmissions
+      inTestSubmissions,
+      { pinnedSubmissions: attempt.pinnedSubmissions }
     );
     if (attempt.score !== scoreBreakdown.totalScore || attempt.maxPossibleScore !== scoreBreakdown.maxPossibleScore) {
       attempt.score = scoreBreakdown.totalScore;
@@ -385,40 +386,42 @@ export const reevaluateAttempt = asyncHandler(async (req, res) => {
 
     const probSubs = subsByProblem[pId] || [];
     if (probSubs.length > 0) {
-      const lastSub = probSubs[probSubs.length - 1];
+      const pinnedId = attempt.pinnedSubmissions?.get?.(pId) || attempt.pinnedSubmissions?.[pId];
+      const targetSub = (pinnedId && probSubs.find(s => s._id.toString() === pinnedId.toString()))
+        || probSubs[probSubs.length - 1];
 
-      if (lastSub.code && p.testCases && p.testCases.length > 0) {
+      if (targetSub.code && p.testCases && p.testCases.length > 0) {
         try {
           const judgeRes = await runAllTestCases({
-            language: lastSub.language,
-            code: lastSub.code,
+            language: targetSub.language,
+            code: targetSub.code,
             testCases: p.testCases,
             timeLimit: Math.ceil((p.timeLimit || 1800) / 1000) || 2,
             memoryLimit: p.memoryLimit || 256,
           });
 
           const newScore = calculateProblemScore(p.difficulty, judgeRes.passedTests, judgeRes.totalTests);
-          lastSub.verdict = judgeRes.verdict;
-          lastSub.passedTests = judgeRes.passedTests;
-          lastSub.totalTests = judgeRes.totalTests;
-          lastSub.runtime = judgeRes.runtime;
-          lastSub.memory = judgeRes.memory;
-          lastSub.compileError = judgeRes.compileError;
-          lastSub.testResults = judgeRes.testResults;
-          lastSub.score = newScore;
-          await lastSub.save();
+          targetSub.verdict = judgeRes.verdict;
+          targetSub.passedTests = judgeRes.passedTests;
+          targetSub.totalTests = judgeRes.totalTests;
+          targetSub.runtime = judgeRes.runtime;
+          targetSub.memory = judgeRes.memory;
+          targetSub.compileError = judgeRes.compileError;
+          targetSub.testResults = judgeRes.testResults;
+          targetSub.score = newScore;
+          await targetSub.save();
           submissionsRejudged++;
         } catch (err) {
-          console.error('Judge0 re-evaluation error for sub', lastSub._id, err);
-          lastSub.score = calculateProblemScore(p.difficulty, lastSub.passedTests, lastSub.totalTests);
-          await lastSub.save();
+          console.error('Judge0 re-evaluation error for sub', targetSub._id, err);
+          targetSub.score = calculateProblemScore(p.difficulty, targetSub.passedTests, targetSub.totalTests);
+          await targetSub.save();
         }
       } else {
-        lastSub.score = calculateProblemScore(p.difficulty, lastSub.passedTests, lastSub.totalTests);
-        await lastSub.save();
+        targetSub.score = calculateProblemScore(p.difficulty, targetSub.passedTests, targetSub.totalTests);
+        await targetSub.save();
       }
 
-      totalScore += lastSub.score;
+      totalScore += targetSub.score;
     }
   }
 
@@ -446,3 +449,43 @@ export const reevaluateAttempt = asyncHandler(async (req, res) => {
   );
 });
 
+
+// Admin: pin (or unpin) a submission as the graded one for a specific problem in an attempt.
+// Body: { submissionId, problemId }  — omit submissionId to unpin.
+export const pinSubmission = asyncHandler(async (req, res) => {
+  const { submissionId, problemId } = req.body;
+  if (!problemId) throw new ApiError(400, 'problemId is required');
+
+  const attempt = await Attempt.findById(req.params.id)
+    .populate({ path: 'questionSetId', populate: { path: 'problems', select: 'difficulty' } })
+    .populate('submissions', 'problemId score passedTests totalTests submittedAt');
+
+  if (!attempt) throw new ApiError(404, 'Attempt not found');
+
+  if (!attempt.pinnedSubmissions) attempt.pinnedSubmissions = new Map();
+
+  if (submissionId) {
+    attempt.pinnedSubmissions.set(problemId, submissionId);
+  } else {
+    attempt.pinnedSubmissions.delete(problemId);
+  }
+  attempt.markModified('pinnedSubmissions');
+
+  // Recalculate score with new pin
+  if (attempt.questionSetId?.problems && attempt.submissions?.length > 0) {
+    const { totalScore, maxPossibleScore } = calculateAttemptScoreBreakdown(
+      attempt.questionSetId.problems,
+      attempt.submissions,
+      { pinnedSubmissions: attempt.pinnedSubmissions }
+    );
+    attempt.score = totalScore;
+    attempt.maxPossibleScore = maxPossibleScore;
+  }
+
+  await attempt.save();
+
+  return res.json(new ApiResponse(200,
+    submissionId ? 'Submission pinned as graded' : 'Submission unpinned',
+    { pinnedSubmissions: Object.fromEntries(attempt.pinnedSubmissions), score: attempt.score }
+  ));
+});

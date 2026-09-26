@@ -14,6 +14,8 @@ const attemptSchema = new Schema({
   status: { type: String, enum: ['in_progress', 'completed', 'timed_out', 'stopped_by_admin'], default: 'in_progress' },
   stoppedByAdmin: { type: Boolean, default: false },
   problemTimerElapsedSec: { type: Map, of: Number, default: {} },
+  pinnedSubmissions: { type: Map, of: Schema.Types.ObjectId, default: {} }, // admin override: { [problemId]: submissionId }
+
 }, { timestamps: true });
 
 attemptSchema.index({ userId: 1, startedAt: -1 });

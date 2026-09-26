@@ -8,6 +8,7 @@ import {
   adjustAttemptTime,
   resetAttempt,
   stopAttempt,
+  pinSubmission,
 } from '../../api/attempts';
 import Navbar from '../../components/Navbar';
 import { calculateAttemptScoreBreakdown, getDifficultyPoints, calculateProblemScore } from '../../utils/scoring';
@@ -33,6 +34,7 @@ export default function AttemptMonitor() {
   const [inspectTab, setInspectTab] = useState('problems'); // 'problems' | 'submissions'
   const [selectedSubmissionCode, setSelectedSubmissionCode] = useState(null);
   const [submissionLoading, setSubmissionLoading] = useState(false);
+  const [pinnedSubs, setPinnedSubs] = useState({}); // { [problemId]: submissionId }
 
   const [timeAdjustModal, setTimeAdjustModal] = useState({ isOpen: false, attempt: null, problemId: '', minutes: 5 });
   const [actionModal, setActionModal] = useState({ isOpen: false, type: '', attempt: null, title: '', message: '' });
@@ -689,6 +691,7 @@ export default function AttemptMonitor() {
                               onClick={() => {
                                 setInspectAttempt(att);
                                 setInspectTab('problems');
+                                setPinnedSubs(att.pinnedSubmissions || {});
                               }}
                               title={title}
                               className={`w-7 h-7 rounded-lg text-[10px] font-mono border flex items-center justify-center transition hover:scale-110 ${bg}`}
@@ -706,6 +709,7 @@ export default function AttemptMonitor() {
                           onClick={() => {
                             setInspectAttempt(att);
                             setInspectTab('problems');
+                            setPinnedSubs(att.pinnedSubmissions || {});
                           }}
                           className="px-3 py-1.5 bg-[#152038] hover:bg-[#1f2e50] border border-[#2a3d66] text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow"
                           title="Inspect live user code & question state"
@@ -1051,6 +1055,8 @@ export default function AttemptMonitor() {
                       <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
                         {inspectAttempt.submissions?.map((sub, sIdx) => {
                           const isSelected = selectedSubmissionCode?._id === sub._id;
+                          const pId = (sub.problemId?._id || sub.problemId)?.toString();
+                          const isPinned = pId && (pinnedSubs[pId] || pinnedSubs?.get?.(pId))?.toString() === sub._id?.toString();
                           return (
                             <div
                               key={sub._id || sIdx}
@@ -1068,13 +1074,18 @@ export default function AttemptMonitor() {
                                 }
                               }}
                               className={`p-3 rounded-xl border transition cursor-pointer text-xs ${
-                                isSelected
+                                isPinned
+                                  ? 'bg-amber-950/40 border-amber-500 shadow'
+                                  : isSelected
                                   ? 'bg-purple-950/60 border-purple-500 shadow'
                                   : 'bg-[#121c33] border-[#213154] hover:border-slate-500'
                               }`}
                             >
                               <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-white uppercase font-mono">{sub.language}</span>
+                                <div className="flex items-center gap-1.5">
+                                  {isPinned && <span title="Graded submission">📌</span>}
+                                  <span className="font-bold text-white uppercase font-mono">{sub.language}</span>
+                                </div>
                                 <span
                                   className={`font-black text-[10px] px-2 py-0.5 rounded ${
                                     sub.verdict === 'AC'
@@ -1088,9 +1099,38 @@ export default function AttemptMonitor() {
                               <p className="text-slate-400 text-[11px]">
                                 Tests: {sub.passedTests}/{sub.totalTests} passed · {sub.runtime || 0}ms
                               </p>
-                              <span className="text-[10px] text-slate-500">
-                                {new Date(sub.submittedAt).toLocaleTimeString()}
-                              </span>
+                              <div className="flex items-center justify-between mt-1.5">
+                                <span className="text-[10px] text-slate-500">
+                                  {new Date(sub.submittedAt).toLocaleTimeString()}
+                                </span>
+                                {pId && (
+                                  <button
+                                    type="button"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      try {
+                                        const res = await pinSubmission(
+                                          inspectAttempt._id,
+                                          pId,
+                                          isPinned ? undefined : sub._id
+                                        );
+                                        const updated = res.data.statusCode.pinnedSubmissions || {};
+                                        setPinnedSubs(updated);
+                                        toast.success(isPinned ? 'Unpinned — using last submission' : '📌 Set as graded submission');
+                                      } catch {
+                                        toast.error('Failed to update graded submission');
+                                      }
+                                    }}
+                                    className={`text-[10px] px-2 py-0.5 rounded border transition font-semibold ${
+                                      isPinned
+                                        ? 'border-amber-600 text-amber-400 hover:bg-amber-950/40'
+                                        : 'border-slate-600 text-slate-400 hover:border-amber-500 hover:text-amber-400'
+                                    }`}
+                                  >
+                                    {isPinned ? 'Unpin' : '📌 Grade this'}
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           );
                         })}

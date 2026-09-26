@@ -14,6 +14,7 @@ import {
   resetAttempt,
   stopAttempt,
   reevaluateAttempt,
+  pinSubmission,
 } from '../controllers/attempt.controller.js';
 
 const router = Router();
@@ -29,6 +30,7 @@ router.post('/:id/adjust-time', verifyAdmin, adjustAttemptTime);
 router.post('/:id/reset', verifyAdmin, resetAttempt);
 router.post('/:id/stop', verifyAdmin, stopAttempt);
 router.post('/:id/reevaluate', verifyAdmin, reevaluateAttempt);
+router.patch('/:id/pin-submission', verifyAdmin, pinSubmission);
 router.patch('/:id/timers', saveTimers);
 router.get('/:id', getAttemptReview);
 

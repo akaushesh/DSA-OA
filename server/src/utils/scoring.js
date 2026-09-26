@@ -84,7 +84,17 @@ export function calculateAttemptScoreBreakdown(problems = [], submissions = [], 
     let problemScore = 0;
 
     // ponytail: scores default to last attempt per question; pass useMaxScore: true for legacy max
-    if (options.useMaxScore) {
+    // If admin pinned a submission for this problem, use that one exclusively
+    const pinnedId = options.pinnedSubmissions?.get?.(pId) || options.pinnedSubmissions?.[pId];
+    const pinnedSub = pinnedId ? probSubs.find(s => (s._id || s).toString() === pinnedId.toString()) : null;
+    const effectiveSub = pinnedSub || null;
+
+    if (effectiveSub) {
+      problemScore =
+        effectiveSub.score !== undefined && effectiveSub.score !== null
+          ? effectiveSub.score
+          : calculateProblemScore(p.difficulty, effectiveSub.passedTests, effectiveSub.totalTests);
+    } else if (options.useMaxScore) {
       probSubs.forEach((sub) => {
         const subScore =
           sub.score !== undefined && sub.score !== null
