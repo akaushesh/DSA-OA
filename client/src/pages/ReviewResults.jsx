@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
-import { getAttempt, deleteAttempt, reevaluateAttempt } from '../api/attempts';
+import { getAttempt, deleteAttempt, reevaluateAttempt, pinSubmission } from '../api/attempts';
 import Navbar from '../components/Navbar';
 import Loader from '../components/Loader';
 import VerdictBadge from '../components/VerdictBadge';
@@ -25,6 +25,7 @@ export default function ReviewResults() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isReevaluateModalOpen, setIsReevaluateModalOpen] = useState(false);
   const [reevaluating, setReevaluating] = useState(false);
+  const [pinnedSubs, setPinnedSubs] = useState({}); // { [problemId]: submissionId }
 
   // Helper to extract full test case comparisons (visible & hidden) for a submission
   const getSubmissionTestDetails = (sub, problem) => {
@@ -76,7 +77,11 @@ export default function ReviewResults() {
 
   useEffect(() => {
     getAttempt(attemptId)
-      .then(r => setAttempt(r.data.statusCode?.attempt))
+      .then(r => {
+        const a = r.data.statusCode?.attempt;
+        setAttempt(a);
+        setPinnedSubs(a?.pinnedSubmissions || {});
+      })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, [attemptId]);
@@ -107,21 +112,24 @@ export default function ReviewResults() {
       const hasAC = pSubs.some(s => s.verdict === 'AC');
       const latestSub = pSubs[pSubs.length - 1];
       const hasAttempted = pSubs.length > 0;
-      
+
+      // Pinned sub takes priority over last for grading
+      const pinnedId = pinnedSubs[pid] || pinnedSubs?.get?.(pid);
+      const gradedSub = (pinnedId && pSubs.find(s => (s._id || s).toString() === pinnedId.toString())) || latestSub;
+
       const status = hasAC ? 'correct' : hasAttempted ? 'incorrect' : 'skipped';
       const section = p.category || p.section || setInfo?.category || 'General';
 
       const totalRuntimeMs = pSubs.reduce((acc, s) => acc + (s.runtime || 500), 0);
       const timeTakenSec = Math.max(12, Math.round(totalRuntimeMs / 1000) + (pSubs.length * 45));
 
-      // Calculate score achieved based on the LAST attempt for this question
       const diffRules = getDifficultyPoints(p.difficulty);
       const maxPossiblePoints = diffRules.totalPoints;
 
-      const lastAttemptScore = latestSub
-        ? (latestSub.score !== undefined && latestSub.score !== null
-            ? latestSub.score
-            : calculateProblemScore(p.difficulty, latestSub.passedTests, latestSub.totalTests))
+      const gradedScore = gradedSub
+        ? (gradedSub.score !== undefined && gradedSub.score !== null
+            ? gradedSub.score
+            : calculateProblemScore(p.difficulty, gradedSub.passedTests, gradedSub.totalTests))
         : 0;
 
       return {
@@ -131,14 +139,15 @@ export default function ReviewResults() {
         status,
         submissions: pSubs,
         latestSub,
-        bestSub: latestSub,
-        maxScore: lastAttemptScore,
+        gradedSub,
+        bestSub: gradedSub,
+        maxScore: gradedScore,
         maxPossiblePoints,
-        hasAC: latestSub?.verdict === 'AC',
+        hasAC: gradedSub?.verdict === 'AC',
         timeTakenSec: hasAttempted ? timeTakenSec : 0,
       };
     });
-  }, [problems, subsByProblem, setInfo]);
+  }, [problems, subsByProblem, setInfo, pinnedSubs]);
 
   // Overall Metrics & Score Calculations (Takes MAX score per question)
   const totalQuestions = problems.length;
@@ -922,14 +931,21 @@ export default function ReviewResults() {
                           const subScore = sub.score !== undefined && sub.score !== null
                             ? sub.score
                             : calculateProblemScore(p.difficulty, sub.passedTests, sub.totalTests);
-                          const isLast = (sub._id || sIdx) === (item.latestSub?._id || (subs.length - 1));
-                          const isBest = subScore === item.maxScore && subScore > 0;
+                          const pid = p._id.toString();
+                          const pinnedId = pinnedSubs[pid] || pinnedSubs?.get?.(pid);
+                          const isGraded = pinnedId
+                            ? sub._id?.toString() === pinnedId.toString()
+                            : sub._id === item.latestSub?._id;
                           const testDetails = getSubmissionTestDetails(sub, p);
 
                           return (
                             <div
                               key={sub._id || sIdx}
-                              className="bg-[#080d1a] border border-[#1e2a47] rounded-xl p-3.5 space-y-3"
+                              className={`border rounded-xl p-3.5 space-y-3 transition ${
+                                isGraded
+                                  ? 'bg-purple-950/20 border-purple-500/40'
+                                  : 'bg-[#080d1a] border-[#1e2a47]'
+                              }`}
                             >
                               <div className="flex items-center justify-between text-xs font-mono flex-wrap gap-2">
                                 <div className="flex items-center gap-2.5 flex-wrap">
@@ -940,15 +956,11 @@ export default function ReviewResults() {
                                   <span className="text-slate-400">{sub.passedTests}/{sub.totalTests} tests passed</span>
                                   <span className="text-slate-500">·</span>
                                   <span className="text-amber-300 font-bold">{subScore} pts</span>
-                                  {isLast ? (
+                                  {isGraded && (
                                     <span className="text-[10px] font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-md">
-                                      ★ Final Attempt (Graded)
+                                      {pinnedId ? '📌 Pinned — Graded' : '★ Final Attempt (Graded)'}
                                     </span>
-                                  ) : isBest ? (
-                                    <span className="text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-md">
-                                      ★ High Score
-                                    </span>
-                                  ) : null}
+                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-2">
@@ -982,6 +994,32 @@ export default function ReviewResults() {
                                   >
                                     {activeView === 'code' ? '▲ Hide Code' : '🔍 View Code'}
                                   </button>
+                                  {role === 'admin' && (
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        try {
+                                          const res = await pinSubmission(
+                                            attempt._id,
+                                            pid,
+                                            isGraded && pinnedId ? undefined : sub._id
+                                          );
+                                          const updated = res.data.statusCode.pinnedSubmissions || {};
+                                          setPinnedSubs(updated);
+                                          toast.success(isGraded && pinnedId ? 'Unpinned — using last submission' : '📌 Set as graded submission');
+                                        } catch {
+                                          toast.error('Failed to update graded submission');
+                                        }
+                                      }}
+                                      className={`font-sans font-bold px-2.5 py-1 rounded-lg text-xs transition border ${
+                                        isGraded && pinnedId
+                                          ? 'bg-amber-950/40 border-amber-600 text-amber-400'
+                                          : 'bg-[#18223a] hover:bg-[#202d4d] border-[#2a3656] text-slate-400 hover:border-amber-500 hover:text-amber-400'
+                                      }`}
+                                    >
+                                      {isGraded && pinnedId ? '📌 Unpin' : '📌 Grade this'}
+                                    </button>
+                                  )}
                                 </div>
                               </div>
 
