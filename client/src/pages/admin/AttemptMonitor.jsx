@@ -1053,7 +1053,44 @@ export default function AttemptMonitor() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* Left: Submissions list */}
                       <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-                        {inspectAttempt.submissions?.map((sub, sIdx) => {
+                        {(() => {
+                          // Group submissions by problem, preserving problem order
+                          const problems = inspectAttempt.questionSetId?.problems || [];
+                          const subsByProblem = {};
+                          (inspectAttempt.submissions || []).forEach(sub => {
+                            const pId = (sub.problemId?._id || sub.problemId)?.toString();
+                            if (!subsByProblem[pId]) subsByProblem[pId] = [];
+                            subsByProblem[pId].push(sub);
+                          });
+                          // Subs with unknown problemId (edge case)
+                          const knownPIds = new Set(problems.map(p => p._id?.toString()));
+
+                          const groups = problems.map((p, pIdx) => ({
+                            pId: p._id?.toString(),
+                            title: p.title,
+                            index: pIdx + 1,
+                            subs: subsByProblem[p._id?.toString()] || [],
+                          })).filter(g => g.subs.length > 0);
+
+                          // Any subs whose problemId isn't in the set
+                          const orphanSubs = (inspectAttempt.submissions || []).filter(s => {
+                            const pId = (s.problemId?._id || s.problemId)?.toString();
+                            return !knownPIds.has(pId);
+                          });
+                          if (orphanSubs.length) groups.push({ pId: 'unknown', title: 'Unknown Problem', index: '?', subs: orphanSubs });
+
+                          return groups.map((group, gIdx) => {
+                            const { pId, title, index, subs } = group;
+                            return (
+                              <div key={pId}>
+                                {/* Divider header per problem */}
+                                <div className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider mb-1.5 ${gIdx > 0 ? 'mt-3 pt-3 border-t border-[#1f2c4b]' : ''}`}>
+                                  <span className="text-purple-400">Q{index}</span>
+                                  <span className="text-slate-400 truncate">{title}</span>
+                                  <span className="ml-auto text-slate-500 font-mono normal-case">{subs.length} sub{subs.length !== 1 ? 's' : ''}</span>
+                                </div>
+                                {subs.map((sub, sIdx) => {
+
                           const isSelected = selectedSubmissionCode?._id === sub._id;
                           const pId = (sub.problemId?._id || sub.problemId)?.toString();
                           const isPinned = pId && (pinnedSubs[pId] || pinnedSubs?.get?.(pId))?.toString() === sub._id?.toString();
@@ -1133,7 +1170,11 @@ export default function AttemptMonitor() {
                               </div>
                             </div>
                           );
-                        })}
+                                })}
+                              </div>
+                            );
+                          });
+                        })()}
                       </div>
 
                       {/* Right: Code Preview Container */}
