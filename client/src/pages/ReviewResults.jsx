@@ -9,6 +9,7 @@ import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
 import ModalConfirm from '../components/ModalConfirm';
 import TestCaseBox from '../components/TestCaseBox';
+import DiffViewer from '../components/DiffViewer';
 import { calculateProblemScore, getDifficultyPoints, calculateAttemptScoreBreakdown } from '../utils/scoring';
 
 export default function ReviewResults() {
@@ -1111,6 +1112,16 @@ export default function ReviewResults() {
                                             borderClass="border-[#18233c]"
                                             copyLabel="Copied answer output"
                                           />
+
+                                          {/* Visual Color-Coded Diff View if Mismatch */}
+                                          {!td.passed && td.expectedOutput !== undefined && (
+                                            <DiffViewer
+                                              actual={td.actualOutput === '<no output produced>' ? '' : td.actualOutput}
+                                              expected={td.expectedOutput}
+                                              bgClass="bg-[#050811]"
+                                              borderClass="border-[#18233c]"
+                                            />
+                                          )}
 
                                           {td.stderr && (
                                             <TestCaseBox
