@@ -186,3 +186,30 @@ export function computeOutputDiff(actual = '', expected = '') {
     rawDiffText,
   };
 }
+
+/**
+ * Extracts line-by-line diff tokens specifically for one side (actual or expected).
+ * Used to render in-place diff highlights directly inside TestCaseBox.
+ */
+export function getBoxDiffTokens(content, diffWith, isExpected = false) {
+  if (diffWith === undefined || diffWith === null) return null;
+  const contentStr = content === null || content === undefined ? '' : String(content);
+  const diffWithStr = String(diffWith);
+
+  if (contentStr === diffWithStr) return null;
+
+  const actualStr = isExpected ? diffWithStr : contentStr;
+  const expectedStr = isExpected ? contentStr : diffWithStr;
+
+  const diff = computeOutputDiff(actualStr, expectedStr);
+  if (!diff.hasDiff) return null;
+
+  const targetType = isExpected ? 'ins' : 'del';
+  const relevantLines = diff.lines.filter((l) => l.type === 'eq' || l.type === targetType);
+
+  return {
+    isWhitespaceOnly: diff.isWhitespaceOnly,
+    lines: relevantLines,
+  };
+}
+

@@ -360,7 +360,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_admin",
-      "community": 1,
+      "community": 8,
       "norm_label": "admin.js"
     },
     {
@@ -370,7 +370,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "api_admin_getstats",
-      "community": 1,
+      "community": 8,
       "norm_label": "getstats()"
     },
     {
@@ -380,7 +380,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "api_admin_getattempttrends",
-      "community": 1,
+      "community": 8,
       "norm_label": "getattempttrends()"
     },
     {
@@ -390,7 +390,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "api_admin_listusers",
-      "community": 1,
+      "community": 8,
       "norm_label": "listusers()"
     },
     {
@@ -400,7 +400,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "api_admin_getuserdetails",
-      "community": 1,
+      "community": 8,
       "norm_label": "getuserdetails()"
     },
     {
@@ -410,7 +410,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "api_admin_updateuserrole",
-      "community": 1,
+      "community": 8,
       "norm_label": "updateuserrole()"
     },
     {
@@ -420,7 +420,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_attempts",
-      "community": 2,
+      "community": 26,
       "norm_label": "attempts.js"
     },
     {
@@ -440,7 +440,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "api_attempts_endattempt",
-      "community": 2,
+      "community": 26,
       "norm_label": "endattempt()"
     },
     {
@@ -450,7 +450,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "api_attempts_getattempt",
-      "community": 2,
+      "community": 25,
       "norm_label": "getattempt()"
     },
     {
@@ -460,7 +460,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "api_attempts_deleteattempt",
-      "community": 2,
+      "community": 26,
       "norm_label": "deleteattempt()"
     },
     {
@@ -480,7 +480,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "api_attempts_allattempts",
-      "community": 2,
+      "community": 26,
       "norm_label": "allattempts()"
     },
     {
@@ -490,7 +490,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "api_attempts_savetimers",
-      "community": 2,
+      "community": 24,
       "norm_label": "savetimers()"
     },
     {
@@ -500,7 +500,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "api_attempts_adjustattempttime",
-      "community": 2,
+      "community": 26,
       "norm_label": "adjustattempttime()"
     },
     {
@@ -510,7 +510,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "api_attempts_resetattempt",
-      "community": 2,
+      "community": 26,
       "norm_label": "resetattempt()"
     },
     {
@@ -520,7 +520,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "api_attempts_stopattempt",
-      "community": 2,
+      "community": 26,
       "norm_label": "stopattempt()"
     },
     {
@@ -530,7 +530,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "api_attempts_reevaluateattempt",
-      "community": 2,
+      "community": 25,
       "norm_label": "reevaluateattempt()"
     },
     {
@@ -540,7 +540,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "api_attempts_pinsubmission",
-      "community": 2,
+      "community": 26,
       "norm_label": "pinsubmission()"
     },
     {
@@ -550,7 +550,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "api_attempts_getmyattemptedtopics",
-      "community": 2,
+      "community": 27,
       "norm_label": "getmyattemptedtopics()"
     },
     {
@@ -650,7 +650,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "api_questionsets_getquestionsets",
-      "community": 2,
+      "community": 25,
       "norm_label": "getquestionsets()"
     },
     {
@@ -720,7 +720,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "api_submissions",
-      "community": 2,
+      "community": 24,
       "norm_label": "submissions.js"
     },
     {
@@ -730,7 +730,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "api_submissions_submitcode",
-      "community": 2,
+      "community": 24,
       "norm_label": "submitcode()"
     },
     {
@@ -740,7 +740,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "api_submissions_runcustomcode",
-      "community": 2,
+      "community": 24,
       "norm_label": "runcustomcode()"
     },
     {
@@ -750,7 +750,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "api_submissions_getsubmission",
-      "community": 2,
+      "community": 24,
       "norm_label": "getsubmission()"
     },
     {
@@ -760,7 +760,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "api_submissions_mysubmissions",
-      "community": 2,
+      "community": 24,
       "norm_label": "mysubmissions()"
     },
     {
@@ -954,13 +954,33 @@
       "norm_label": "categorytrendschart()"
     },
     {
+      "label": "DiffViewer.jsx",
+      "file_type": "code",
+      "source_file": "client/src/components/DiffViewer.jsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "components_diffviewer",
+      "community": 23,
+      "norm_label": "diffviewer.jsx"
+    },
+    {
+      "label": "DiffViewer()",
+      "file_type": "code",
+      "source_file": "client/src/components/DiffViewer.jsx",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "components_diffviewer_diffviewer",
+      "community": 23,
+      "norm_label": "diffviewer()"
+    },
+    {
       "label": "DifficultyChip.jsx",
       "file_type": "code",
       "source_file": "client/src/components/DifficultyChip.jsx",
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_difficultychip",
-      "community": 2,
+      "community": 27,
       "norm_label": "difficultychip.jsx"
     },
     {
@@ -970,7 +990,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_difficultychip_colors",
-      "community": 2,
+      "community": 27,
       "norm_label": "colors"
     },
     {
@@ -980,7 +1000,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "components_difficultychip_difficultychip",
-      "community": 2,
+      "community": 27,
       "norm_label": "difficultychip()"
     },
     {
@@ -990,7 +1010,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_loader",
-      "community": 2,
+      "community": 25,
       "norm_label": "loader.jsx"
     },
     {
@@ -1000,7 +1020,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_loader_loader",
-      "community": 2,
+      "community": 25,
       "norm_label": "loader()"
     },
     {
@@ -1010,7 +1030,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_modalconfirm",
-      "community": 2,
+      "community": 24,
       "norm_label": "modalconfirm.jsx"
     },
     {
@@ -1020,7 +1040,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_modalconfirm_modalconfirm",
-      "community": 2,
+      "community": 24,
       "norm_label": "modalconfirm()"
     },
     {
@@ -1050,7 +1070,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_paginator",
-      "community": 1,
+      "community": 8,
       "norm_label": "paginator.jsx"
     },
     {
@@ -1060,7 +1080,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_paginator_paginator",
-      "community": 1,
+      "community": 8,
       "norm_label": "paginator()"
     },
     {
@@ -1110,7 +1130,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_verdictbadge",
-      "community": 2,
+      "community": 25,
       "norm_label": "verdictbadge.jsx"
     },
     {
@@ -1120,7 +1140,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_verdictbadge_colors",
-      "community": 2,
+      "community": 25,
       "norm_label": "colors"
     },
     {
@@ -1130,7 +1150,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "components_verdictbadge_verdictbadge",
-      "community": 2,
+      "community": 25,
       "norm_label": "verdictbadge()"
     },
     {
@@ -1170,37 +1190,37 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pages_codingarena",
-      "community": 2,
+      "community": 24,
       "norm_label": "codingarena.jsx"
     },
     {
       "label": "STARTERS",
       "file_type": "code",
       "source_file": "client/src/pages/CodingArena.jsx",
-      "source_location": "L16",
+      "source_location": "L17",
       "_origin": "ast",
       "id": "pages_codingarena_starters",
-      "community": 2,
+      "community": 24,
       "norm_label": "starters"
     },
     {
       "label": "isInvalidOrGenericDraft()",
       "file_type": "code",
       "source_file": "client/src/pages/CodingArena.jsx",
-      "source_location": "L21",
+      "source_location": "L22",
       "_origin": "ast",
       "id": "pages_codingarena_isinvalidorgenericdraft",
-      "community": 2,
+      "community": 24,
       "norm_label": "isinvalidorgenericdraft()"
     },
     {
       "label": "CodingArena()",
       "file_type": "code",
       "source_file": "client/src/pages/CodingArena.jsx",
-      "source_location": "L36",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "pages_codingarena_codingarena",
-      "community": 2,
+      "community": 24,
       "norm_label": "codingarena()"
     },
     {
@@ -1210,7 +1230,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pages_dashboard",
-      "community": 2,
+      "community": 25,
       "norm_label": "dashboard.jsx"
     },
     {
@@ -1220,7 +1240,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "pages_dashboard_categories",
-      "community": 2,
+      "community": 25,
       "norm_label": "categories"
     },
     {
@@ -1230,7 +1250,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "pages_dashboard_dashboard",
-      "community": 2,
+      "community": 25,
       "norm_label": "dashboard()"
     },
     {
@@ -1330,17 +1350,17 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pages_reviewresults",
-      "community": 2,
+      "community": 25,
       "norm_label": "reviewresults.jsx"
     },
     {
       "label": "ReviewResults()",
       "file_type": "code",
       "source_file": "client/src/pages/ReviewResults.jsx",
-      "source_location": "L14",
+      "source_location": "L15",
       "_origin": "ast",
       "id": "pages_reviewresults_reviewresults",
-      "community": 2,
+      "community": 25,
       "norm_label": "reviewresults()"
     },
     {
@@ -1350,7 +1370,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pages_topicwise",
-      "community": 2,
+      "community": 27,
       "norm_label": "topicwise.jsx"
     },
     {
@@ -1360,7 +1380,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "pages_topicwise_topicwise",
-      "community": 2,
+      "community": 27,
       "norm_label": "topicwise()"
     },
     {
@@ -1370,7 +1390,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "admin_admindashboard",
-      "community": 1,
+      "community": 8,
       "norm_label": "admindashboard.jsx"
     },
     {
@@ -1380,7 +1400,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "admin_admindashboard_admindashboard",
-      "community": 1,
+      "community": 8,
       "norm_label": "admindashboard()"
     },
     {
@@ -1390,7 +1410,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "admin_attemptmonitor",
-      "community": 2,
+      "community": 26,
       "norm_label": "attemptmonitor.jsx"
     },
     {
@@ -1400,7 +1420,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "admin_attemptmonitor_attemptmonitor",
-      "community": 2,
+      "community": 26,
       "norm_label": "attemptmonitor()"
     },
     {
@@ -1520,7 +1540,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "admin_usermanager",
-      "community": 1,
+      "community": 8,
       "norm_label": "usermanager.jsx"
     },
     {
@@ -1530,7 +1550,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "admin_usermanager_usermanager",
-      "community": 1,
+      "community": 8,
       "norm_label": "usermanager()"
     },
     {
@@ -1744,6 +1764,146 @@
       "norm_label": "validtoken"
     },
     {
+      "label": "diffUtils.js",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "utils_diffutils",
+      "community": 23,
+      "norm_label": "diffutils.js"
+    },
+    {
+      "label": "tokenize()",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.js",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "utils_diffutils_tokenize",
+      "community": 23,
+      "norm_label": "tokenize()"
+    },
+    {
+      "label": "tokenDiff()",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.js",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "utils_diffutils_tokendiff",
+      "community": 23,
+      "norm_label": "tokendiff()"
+    },
+    {
+      "label": "computeOutputDiff()",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.js",
+      "source_location": "L78",
+      "_origin": "ast",
+      "id": "utils_diffutils_computeoutputdiff",
+      "community": 23,
+      "norm_label": "computeoutputdiff()"
+    },
+    {
+      "label": "diffUtils.test.js",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "utils_diffutils_test",
+      "community": 23,
+      "norm_label": "diffutils.test.js"
+    },
+    {
+      "label": "res1",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "utils_diffutils_test_res1",
+      "community": 23,
+      "norm_label": "res1"
+    },
+    {
+      "label": "res2",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "utils_diffutils_test_res2",
+      "community": 23,
+      "norm_label": "res2"
+    },
+    {
+      "label": "res3",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L14",
+      "_origin": "ast",
+      "id": "utils_diffutils_test_res3",
+      "community": 23,
+      "norm_label": "res3"
+    },
+    {
+      "label": "diffTokenA",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "utils_diffutils_test_difftokena",
+      "community": 23,
+      "norm_label": "difftokena"
+    },
+    {
+      "label": "diffTokenB",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L24",
+      "_origin": "ast",
+      "id": "utils_diffutils_test_difftokenb",
+      "community": 23,
+      "norm_label": "difftokenb"
+    },
+    {
+      "label": "res4",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L31",
+      "_origin": "ast",
+      "id": "utils_diffutils_test_res4",
+      "community": 23,
+      "norm_label": "res4"
+    },
+    {
+      "label": "res5",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L40",
+      "_origin": "ast",
+      "id": "utils_diffutils_test_res5",
+      "community": 23,
+      "norm_label": "res5"
+    },
+    {
+      "label": "res6",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L45",
+      "_origin": "ast",
+      "id": "utils_diffutils_test_res6",
+      "community": 23,
+      "norm_label": "res6"
+    },
+    {
+      "label": "delLine",
+      "file_type": "code",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L47",
+      "_origin": "ast",
+      "id": "utils_diffutils_test_delline",
+      "community": 23,
+      "norm_label": "delline"
+    },
+    {
       "label": "scoring.js",
       "file_type": "code",
       "source_file": "client/src/utils/scoring.js",
@@ -1800,7 +1960,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "client_src_utils_startercode_js_utils_startercode",
-      "community": 2,
+      "community": 24,
       "norm_label": "startercode.js"
     },
     {
@@ -1810,7 +1970,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "client_src_utils_startercode_js_utils_startercode_normalizestartercode",
-      "community": 2,
+      "community": 24,
       "norm_label": "normalizestartercode()"
     },
     {
@@ -1820,7 +1980,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "utils_startercode_getproblemstarter",
-      "community": 2,
+      "community": 24,
       "norm_label": "getproblemstarter()"
     },
     {
@@ -2670,7 +2830,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "controllers_questionset_controller",
-      "community": 7,
+      "community": 0,
       "norm_label": "questionset.controller.js"
     },
     {
@@ -2680,7 +2840,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "controllers_questionset_controller_resolveproblemids",
-      "community": 7,
+      "community": 0,
       "norm_label": "resolveproblemids()"
     },
     {
@@ -2690,7 +2850,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "controllers_questionset_controller_createquestionset",
-      "community": 7,
+      "community": 0,
       "norm_label": "createquestionset"
     },
     {
@@ -2700,7 +2860,7 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "controllers_questionset_controller_importquestionset",
-      "community": 7,
+      "community": 0,
       "norm_label": "importquestionset"
     },
     {
@@ -2710,7 +2870,7 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "controllers_questionset_controller_listquestionsets",
-      "community": 7,
+      "community": 0,
       "norm_label": "listquestionsets"
     },
     {
@@ -2720,7 +2880,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "controllers_questionset_controller_getquestionset",
-      "community": 7,
+      "community": 0,
       "norm_label": "getquestionset"
     },
     {
@@ -2730,7 +2890,7 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "controllers_questionset_controller_updatequestionset",
-      "community": 7,
+      "community": 0,
       "norm_label": "updatequestionset"
     },
     {
@@ -2740,7 +2900,7 @@
       "source_location": "L123",
       "_origin": "ast",
       "id": "controllers_questionset_controller_deletequestionset",
-      "community": 7,
+      "community": 0,
       "norm_label": "deletequestionset"
     },
     {
@@ -2750,7 +2910,7 @@
       "source_location": "L136",
       "_origin": "ast",
       "id": "controllers_questionset_controller_reevaluatequestionset",
-      "community": 7,
+      "community": 0,
       "norm_label": "reevaluatequestionset"
     },
     {
@@ -2760,7 +2920,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "controllers_submission_controller",
-      "community": 7,
+      "community": 0,
       "norm_label": "submission.controller.js"
     },
     {
@@ -2770,7 +2930,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "controllers_submission_controller_submitcode",
-      "community": 7,
+      "community": 0,
       "norm_label": "submitcode"
     },
     {
@@ -2780,7 +2940,7 @@
       "source_location": "L94",
       "_origin": "ast",
       "id": "controllers_submission_controller_getsubmission",
-      "community": 7,
+      "community": 0,
       "norm_label": "getsubmission"
     },
     {
@@ -2790,7 +2950,7 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "controllers_submission_controller_mysubmissions",
-      "community": 7,
+      "community": 0,
       "norm_label": "mysubmissions"
     },
     {
@@ -2800,7 +2960,7 @@
       "source_location": "L118",
       "_origin": "ast",
       "id": "controllers_submission_controller_runcustom",
-      "community": 7,
+      "community": 0,
       "norm_label": "runcustom"
     },
     {
@@ -2950,7 +3110,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "models_attempt_model",
-      "community": 7,
+      "community": 0,
       "norm_label": "attempt.model.js"
     },
     {
@@ -2960,7 +3120,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "models_attempt_model_attemptschema",
-      "community": 7,
+      "community": 0,
       "norm_label": "attemptschema"
     },
     {
@@ -2970,7 +3130,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "models_attempt_model_attempt",
-      "community": 7,
+      "community": 0,
       "norm_label": "attempt"
     },
     {
@@ -2980,7 +3140,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "models_problem_model",
-      "community": 7,
+      "community": 0,
       "norm_label": "problem.model.js"
     },
     {
@@ -2990,7 +3150,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "models_problem_model_testcaseschema",
-      "community": 7,
+      "community": 0,
       "norm_label": "testcaseschema"
     },
     {
@@ -3000,7 +3160,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "models_problem_model_exampleschema",
-      "community": 7,
+      "community": 0,
       "norm_label": "exampleschema"
     },
     {
@@ -3010,7 +3170,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "models_problem_model_problemschema",
-      "community": 7,
+      "community": 0,
       "norm_label": "problemschema"
     },
     {
@@ -3020,7 +3180,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "models_problem_model_problem",
-      "community": 7,
+      "community": 0,
       "norm_label": "problem"
     },
     {
@@ -3030,7 +3190,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "models_questionset_model",
-      "community": 3,
+      "community": 0,
       "norm_label": "questionset.model.js"
     },
     {
@@ -3040,7 +3200,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "models_questionset_model_questionsetschema",
-      "community": 3,
+      "community": 0,
       "norm_label": "questionsetschema"
     },
     {
@@ -3050,7 +3210,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "models_questionset_model_questionset",
-      "community": 3,
+      "community": 0,
       "norm_label": "questionset"
     },
     {
@@ -3060,7 +3220,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "models_submission_model",
-      "community": 7,
+      "community": 0,
       "norm_label": "submission.model.js"
     },
     {
@@ -3070,7 +3230,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "models_submission_model_testresultschema",
-      "community": 7,
+      "community": 0,
       "norm_label": "testresultschema"
     },
     {
@@ -3080,7 +3240,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "models_submission_model_submissionschema",
-      "community": 7,
+      "community": 0,
       "norm_label": "submissionschema"
     },
     {
@@ -3090,7 +3250,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "models_submission_model_submission",
-      "community": 7,
+      "community": 0,
       "norm_label": "submission"
     },
     {
@@ -3190,7 +3350,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_questionset_routes",
-      "community": 7,
+      "community": 0,
       "norm_label": "questionset.routes.js"
     },
     {
@@ -3210,7 +3370,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_submission_routes",
-      "community": 7,
+      "community": 0,
       "norm_label": "submission.routes.js"
     },
     {
@@ -4430,9 +4590,9 @@
       "source_file": "client/src/api/attempts.js",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "api_attempts",
-      "target": "api_attempts_pinsubmission",
-      "confidence_score": 1.0
+      "target": "api_attempts_pinsubmission"
     },
     {
       "relation": "contains",
@@ -4777,9 +4937,9 @@
       "source_file": "client/src/pages/admin/AttemptMonitor.jsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "admin_attemptmonitor",
-      "target": "api_attempts_pinsubmission",
-      "confidence_score": 1.0
+      "target": "api_attempts_pinsubmission"
     },
     {
       "relation": "imports",
@@ -4788,9 +4948,9 @@
       "source_file": "client/src/pages/ReviewResults.jsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_reviewresults",
-      "target": "api_attempts_pinsubmission",
-      "confidence_score": 1.0
+      "target": "api_attempts_pinsubmission"
     },
     {
       "relation": "imports",
@@ -5872,6 +6032,82 @@
       "confidence_score": 1.0,
       "source": "pages_dashboard",
       "target": "components_categorytrendschart_categorytrendschart"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/components/DiffViewer.jsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "components_diffviewer",
+      "target": "components_diffviewer_diffviewer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/components/DiffViewer.jsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "components_diffviewer",
+      "target": "utils_diffutils",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/components/DiffViewer.jsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "components_diffviewer",
+      "target": "utils_diffutils_computeoutputdiff",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/pages/CodingArena.jsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "pages_codingarena",
+      "target": "components_diffviewer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/pages/ReviewResults.jsx",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "pages_reviewresults",
+      "target": "components_diffviewer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/pages/CodingArena.jsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "pages_codingarena",
+      "target": "components_diffviewer_diffviewer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/pages/ReviewResults.jsx",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "pages_reviewresults",
+      "target": "components_diffviewer_diffviewer",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports_from",
@@ -7242,6 +7478,170 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.js",
+      "source_location": "L78",
+      "weight": 1.0,
+      "source": "utils_diffutils",
+      "target": "utils_diffutils_computeoutputdiff",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.js",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "utils_diffutils",
+      "target": "utils_diffutils_tokendiff",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "utils_diffutils",
+      "target": "utils_diffutils_tokenize",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "utils_diffutils_test",
+      "target": "utils_diffutils",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.js",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "utils_diffutils_tokendiff",
+      "target": "utils_diffutils_tokenize",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.js",
+      "source_location": "L96",
+      "weight": 1.0,
+      "source": "utils_diffutils_computeoutputdiff",
+      "target": "utils_diffutils_tokendiff",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "utils_diffutils_test",
+      "target": "utils_diffutils_computeoutputdiff",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L47",
+      "weight": 1.0,
+      "source": "utils_diffutils_test",
+      "target": "utils_diffutils_test_delline",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "utils_diffutils_test",
+      "target": "utils_diffutils_test_difftokena",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "utils_diffutils_test",
+      "target": "utils_diffutils_test_difftokenb",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "utils_diffutils_test",
+      "target": "utils_diffutils_test_res1",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "utils_diffutils_test",
+      "target": "utils_diffutils_test_res2",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "utils_diffutils_test",
+      "target": "utils_diffutils_test_res3",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "utils_diffutils_test",
+      "target": "utils_diffutils_test_res4",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L40",
+      "weight": 1.0,
+      "source": "utils_diffutils_test",
+      "target": "utils_diffutils_test_res5",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "client/src/utils/diffUtils.test.js",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "utils_diffutils_test",
+      "target": "utils_diffutils_test_res6",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "client/src/utils/scoring.js",
       "source_location": "L55",
       "weight": 1.0,
@@ -8336,9 +8736,9 @@
       "source_file": "server/src/controllers/attempt.controller.js",
       "source_location": "L455",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "controllers_attempt_controller",
-      "target": "controllers_attempt_controller_pinsubmission",
-      "confidence_score": 1.0
+      "target": "controllers_attempt_controller_pinsubmission"
     },
     {
       "relation": "contains",
@@ -8738,9 +9138,9 @@
       "source_file": "server/src/routes/attempt.routes.js",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_attempt_routes",
-      "target": "controllers_attempt_controller_pinsubmission",
-      "confidence_score": 1.0
+      "target": "controllers_attempt_controller_pinsubmission"
     },
     {
       "relation": "imports_from",
@@ -10999,5 +11399,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "6b5be3ac543a84dd9eefb18dd84e6943bee7c296"
+  "built_at_commit": "6bcab967e6bbf38d24797c9d9e10bb3611fbf668"
 }

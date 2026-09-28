@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { computeOutputDiff } from './diffUtils.js';
+import { computeOutputDiff, getBoxDiffTokens } from './diffUtils.js';
 
 // Test 1: Identical strings
 const res1 = computeOutputDiff('1 2 3', '1 2 3');
@@ -48,4 +48,22 @@ const delLine = res6.lines.find((l) => l.text === 'extra');
 assert.ok(delLine, 'Should have deleted line');
 assert.strictEqual(delLine.prefix, '-');
 
+// Test 7: getBoxDiffTokens in-box extraction
+const boxActual = getBoxDiffTokens('[0, 2]', '[0, 1]', false);
+assert.ok(boxActual, 'Should return box diff data');
+assert.strictEqual(boxActual.lines.length, 1);
+const actDiffTok = boxActual.lines[0].tokens.find((t) => t.isDiff);
+assert.strictEqual(actDiffTok.text, '2');
+
+const boxExpected = getBoxDiffTokens('[0, 1]', '[0, 2]', true);
+assert.ok(boxExpected, 'Should return box diff data');
+assert.strictEqual(boxExpected.lines.length, 1);
+const expDiffTok = boxExpected.lines[0].tokens.find((t) => t.isDiff);
+assert.strictEqual(expDiffTok.text, '1');
+
+// Test 8: getBoxDiffTokens when identical or undefined
+assert.strictEqual(getBoxDiffTokens('[0, 1]', '[0, 1]', false), null);
+assert.strictEqual(getBoxDiffTokens('[0, 1]', undefined, false), null);
+
 console.log('diffUtils unit self-check passed');
+

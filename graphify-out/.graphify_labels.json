@@ -1,6 +1,5 @@
 {
   "0": "Admin Controller Layer",
-  "1": "Admin UI Pages",
   "2": "Attempt Monitor & API",
   "3": "Attempt Controller Logic",
   "4": "Client Dependencies & Config",
@@ -9,7 +8,6 @@
   "7": "Submission Controller",
   "8": "Category Trends Chart",
   "9": "Auth Service & Token Mgmt",
-  "10": "Topic Aggregator Utility",
   "11": "Scoring Test Utilities",
   "12": "Starter Code Tests",
   "13": "Client Scoring Utilities",
@@ -23,8 +21,5 @@
   "21": "ESLint Config",
   "22": "Vite Config",
   "23": "Community 23",
-  "24": "Community 24",
-  "25": "Community 25",
-  "26": "Community 26",
-  "27": "Community 27"
+  "24": "Community 24"
 }

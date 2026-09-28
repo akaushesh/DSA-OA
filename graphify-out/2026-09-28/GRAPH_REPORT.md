@@ -1,16 +1,16 @@
-# Graph Report - DSA-OA  (2026-09-26)
+# Graph Report - DSA-OA  (2026-09-28)
 
 ## Corpus Check
-- 87 files · ~47,923 words
+- 90 files · ~49,800 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 378 nodes · 681 edges · 23 communities (19 shown, 4 thin omitted)
+- 394 nodes · 704 edges · 28 communities (24 shown, 4 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6b5be3ac`
+- Built from commit: `6bcab967`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -33,6 +33,11 @@
 - [[_COMMUNITY_DB & Server Entry Points|DB & Server Entry Points]]
 - [[_COMMUNITY_Dev Start Scripts|Dev Start Scripts]]
 - [[_COMMUNITY_Client Vercel Config|Client Vercel Config]]
+- [[_COMMUNITY_Community 23|Community 23]]
+- [[_COMMUNITY_Community 24|Community 24]]
+- [[_COMMUNITY_Community 25|Community 25]]
+- [[_COMMUNITY_Community 26|Community 26]]
+- [[_COMMUNITY_Community 27|Community 27]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `AuthService` - 15 edges
@@ -52,23 +57,23 @@
 ## Import Cycles
 - None detected.
 
-## Communities (23 total, 4 thin omitted)
+## Communities (28 total, 4 thin omitted)
 
 ### Community 0 - "Admin Controller Layer"
-Cohesion: 0.08
-Nodes (35): getAttemptTrends, getStats, getUserDetails, listUsers, updateUserRole, createProblem, deleteProblem, getProblemAdmin (+27 more)
+Cohesion: 0.06
+Nodes (57): getAttemptTrends, getStats, getUserDetails, listUsers, updateUserRole, createProblem, deleteProblem, getProblemAdmin (+49 more)
 
 ### Community 1 - "Admin UI Pages"
-Cohesion: 0.13
-Nodes (13): emptyForm, getAttemptTrends(), getStats(), getUserDetails(), listUsers(), updateUserRole(), API, createProblem() (+5 more)
+Cohesion: 0.23
+Nodes (7): emptyForm, API, createProblem(), deleteProblem(), getProblem(), getProblems(), updateProblem()
 
 ### Community 2 - "Attempt Monitor & API"
-Cohesion: 0.07
-Nodes (36): SAMPLE_DSA_JSON, TIMER_PRESETS, adjustAttemptTime(), allAttempts(), deleteAttempt(), endAttempt(), getAttempt(), getMyAttemptedTopics() (+28 more)
+Cohesion: 0.18
+Nodes (11): SAMPLE_DSA_JSON, TIMER_PRESETS, startAttempt(), createQuestionSet(), deleteQuestionSet(), getQuestionSet(), importQuestionSet(), reevaluateQuestionSet() (+3 more)
 
 ### Community 3 - "Attempt Controller Logic"
-Cohesion: 0.11
-Nodes (24): adjustAttemptTime, allAttempts, deleteAttempt, endAttempt, getAttemptReview, getMyAttemptedTopics, myAttempts, pinSubmission (+16 more)
+Cohesion: 0.12
+Nodes (22): adjustAttemptTime, allAttempts, deleteAttempt, endAttempt, getAttemptReview, getMyAttemptedTopics, myAttempts, pinSubmission (+14 more)
 
 ### Community 4 - "Client Dependencies & Config"
 Cohesion: 0.06
@@ -83,12 +88,12 @@ Cohesion: 0.08
 Nodes (24): author, dependencies, axios, bcryptjs, cookie-parser, cors, dotenv, express (+16 more)
 
 ### Community 7 - "Submission Controller"
-Cohesion: 0.10
-Nodes (27): createQuestionSet, deleteQuestionSet, getQuestionSet, importQuestionSet, listQuestionSets, reevaluateQuestionSet, updateQuestionSet, getSubmission (+19 more)
+Cohesion: 0.39
+Nodes (7): ensureIncludeHeaders(), execPromise, executeProcess(), INCLUDE_DIR, runAllTestCases(), runCustomInput(), runOne()
 
 ### Community 8 - "Category Trends Chart"
-Cohesion: 0.13
-Nodes (16): CATEGORY_COLORS, CategoryTrendsChart(), DEFAULT_COLOR, getCategoryColor(), aggregateCategoryStats(), computeRecentTrends(), allTrends, arrayStat (+8 more)
+Cohesion: 0.09
+Nodes (22): getAttemptTrends(), getStats(), getUserDetails(), listUsers(), updateUserRole(), CATEGORY_COLORS, CategoryTrendsChart(), DEFAULT_COLOR (+14 more)
 
 ### Community 10 - "Topic Aggregator Utility"
 Cohesion: 0.24
@@ -110,8 +115,28 @@ Nodes (3): calculateProblemScore(), getDifficultyPoints(), SCORING_RULES
 Cohesion: 0.50
 Nodes (3): calculateProblemScore(), getDifficultyPoints(), SCORING_RULES
 
+### Community 23 - "Community 23"
+Cohesion: 0.16
+Nodes (13): DiffViewer(), computeOutputDiff(), delLine, diffTokenA, diffTokenB, res1, res2, res3 (+5 more)
+
+### Community 24 - "Community 24"
+Cohesion: 0.18
+Nodes (8): saveTimers(), getSubmission(), mySubmissions(), runCustomCode(), submitCode(), ModalConfirm(), STARTERS, getProblemStarter()
+
+### Community 25 - "Community 25"
+Cohesion: 0.22
+Nodes (7): getAttempt(), reevaluateAttempt(), getQuestionSets(), Loader(), COLORS, VerdictBadge(), CATEGORIES
+
+### Community 26 - "Community 26"
+Cohesion: 0.36
+Nodes (7): adjustAttemptTime(), allAttempts(), deleteAttempt(), endAttempt(), pinSubmission(), resetAttempt(), stopAttempt()
+
+### Community 27 - "Community 27"
+Cohesion: 0.40
+Nodes (3): getMyAttemptedTopics(), COLORS, DifficultyChip()
+
 ## Knowledge Gaps
-- **118 isolated node(s):** `name`, `private`, `version`, `type`, `dev` (+113 more)
+- **127 isolated node(s):** `name`, `private`, `version`, `type`, `dev` (+122 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -119,16 +144,16 @@ Nodes (3): calculateProblemScore(), getDifficultyPoints(), SCORING_RULES
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AuthService` connect `Auth Service & Token Mgmt` to `Auth State & User Attempts`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
-- **Why does `Navbar()` connect `Attempt Monitor & API` to `Admin UI Pages`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Why does `API` connect `Admin UI Pages` to `Attempt Monitor & API`, `Auth State & User Attempts`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Why does `Navbar()` connect `Attempt Monitor & API` to `Admin UI Pages`, `Category Trends Chart`, `Community 25`, `Community 26`, `Community 27`?**
+  _High betweenness centrality (0.014) - this node is a cross-community bridge._
 - **What connects `name`, `private`, `version` to the rest of the system?**
-  _118 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _127 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Admin Controller Layer` be split into smaller, more focused modules?**
-  _Cohesion score 0.08106219426974144 - nodes in this community are weakly interconnected._
-- **Should `Admin UI Pages` be split into smaller, more focused modules?**
-  _Cohesion score 0.13 - nodes in this community are weakly interconnected._
-- **Should `Attempt Monitor & API` be split into smaller, more focused modules?**
-  _Cohesion score 0.0670762928827445 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05546218487394958 - nodes in this community are weakly interconnected._
+- **Should `Attempt Controller Logic` be split into smaller, more focused modules?**
+  _Cohesion score 0.12307692307692308 - nodes in this community are weakly interconnected._
+- **Should `Client Dependencies & Config` be split into smaller, more focused modules?**
+  _Cohesion score 0.0625 - nodes in this community are weakly interconnected._
+- **Should `Auth State & User Attempts` be split into smaller, more focused modules?**
+  _Cohesion score 0.1103448275862069 - nodes in this community are weakly interconnected._

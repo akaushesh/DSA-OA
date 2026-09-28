@@ -10,7 +10,6 @@ import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
 import ModalConfirm from '../components/ModalConfirm';
 import TestCaseBox from '../components/TestCaseBox';
-import DiffViewer from '../components/DiffViewer';
 import { calculateProblemScore, getDifficultyPoints } from '../utils/scoring';
 import { getProblemStarter } from '../utils/starterCode';
 
@@ -1823,6 +1822,8 @@ export default function CodingArena() {
                                         <TestCaseBox
                                           label="Expected Output:"
                                           content={originalTc.expectedOutput}
+                                          diffWith={!tr.passed ? tr.stdout : undefined}
+                                          isDiffExpected={true}
                                           emptyPlaceholder="<empty output>"
                                           colorClass="text-emerald-400 font-bold"
                                           bgClass="bg-[#080d1a]"
@@ -1836,22 +1837,14 @@ export default function CodingArena() {
                                     <TestCaseBox
                                       label="Answer Given in this Attempt:"
                                       content={tr.stdout}
+                                      diffWith={!tr.passed && originalTc ? originalTc.expectedOutput : undefined}
+                                      isDiffExpected={false}
                                       emptyPlaceholder="<no output produced>"
                                       colorClass={tr.passed ? 'text-emerald-300 font-bold' : 'text-rose-400 font-bold'}
                                       bgClass="bg-[#080d1a]"
                                       borderClass="border-[#1e2a47]"
                                       copyLabel="Copied answer output"
                                     />
-
-                                    {/* Visual Color-Coded Diff View if Mismatch */}
-                                    {!tr.passed && originalTc && originalTc.expectedOutput !== undefined && (
-                                      <DiffViewer
-                                        actual={tr.stdout}
-                                        expected={originalTc.expectedOutput}
-                                        bgClass="bg-[#080d1a]"
-                                        borderClass="border-[#1e2a47]"
-                                      />
-                                    )}
 
                                     {tr.stderr && (
                                       <TestCaseBox

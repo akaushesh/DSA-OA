@@ -9,7 +9,6 @@ import VerdictBadge from '../components/VerdictBadge';
 import DifficultyChip from '../components/DifficultyChip';
 import ModalConfirm from '../components/ModalConfirm';
 import TestCaseBox from '../components/TestCaseBox';
-import DiffViewer from '../components/DiffViewer';
 import { calculateProblemScore, getDifficultyPoints, calculateAttemptScoreBreakdown } from '../utils/scoring';
 
 export default function ReviewResults() {
@@ -1095,6 +1094,8 @@ export default function ReviewResults() {
                                             <TestCaseBox
                                               label="Expected Output:"
                                               content={td.expectedOutput}
+                                              diffWith={!td.passed ? (td.actualOutput === '<no output produced>' ? '' : td.actualOutput) : undefined}
+                                              isDiffExpected={true}
                                               emptyPlaceholder="<empty output>"
                                               colorClass="text-emerald-400 font-bold"
                                               bgClass="bg-[#050811]"
@@ -1106,22 +1107,14 @@ export default function ReviewResults() {
                                           <TestCaseBox
                                             label="Answer Given in this Attempt:"
                                             content={td.actualOutput}
+                                            diffWith={!td.passed && td.expectedOutput !== undefined ? td.expectedOutput : undefined}
+                                            isDiffExpected={false}
                                             emptyPlaceholder="<no output produced>"
                                             colorClass={td.passed ? 'text-emerald-300 font-bold' : 'text-rose-400 font-bold'}
                                             bgClass="bg-[#050811]"
                                             borderClass="border-[#18233c]"
                                             copyLabel="Copied answer output"
                                           />
-
-                                          {/* Visual Color-Coded Diff View if Mismatch */}
-                                          {!td.passed && td.expectedOutput !== undefined && (
-                                            <DiffViewer
-                                              actual={td.actualOutput === '<no output produced>' ? '' : td.actualOutput}
-                                              expected={td.expectedOutput}
-                                              bgClass="bg-[#050811]"
-                                              borderClass="border-[#18233c]"
-                                            />
-                                          )}
 
                                           {td.stderr && (
                                             <TestCaseBox

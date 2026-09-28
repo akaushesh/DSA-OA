@@ -100,9 +100,9 @@
     "semantic_hash": "31f075c3c29023c4167e5409f4b784f8"
   },
   "client/src/components/TestCaseBox.jsx": {
-    "mtime": 1789643654.616243,
-    "ast_hash": "591d0063e2cd88ec4713e7fefde7c219",
-    "semantic_hash": "591d0063e2cd88ec4713e7fefde7c219"
+    "mtime": 1790595368.8426526,
+    "ast_hash": "47390451310a54249c6c7c0fc075ccf2",
+    "semantic_hash": ""
   },
   "client/src/components/Timer.jsx": {
     "mtime": 1788347783.7690864,
@@ -120,8 +120,8 @@
     "semantic_hash": "9bfceb78f5d15bcc6d99c72df6a14c90"
   },
   "client/src/pages/CodingArena.jsx": {
-    "mtime": 1790594974.7457502,
-    "ast_hash": "bc9c555beed89577b36a200785d9d3f0",
+    "mtime": 1790595392.9943786,
+    "ast_hash": "de29263486f5df6b61219a2c32ea7fc3",
     "semantic_hash": ""
   },
   "client/src/pages/Dashboard.jsx": {
@@ -150,8 +150,8 @@
     "semantic_hash": "49de3907ab9bd5af91d9a626f2f910fa"
   },
   "client/src/pages/ReviewResults.jsx": {
-    "mtime": 1790595016.6529448,
-    "ast_hash": "3f0cc992a4d09495df95017fdc693406",
+    "mtime": 1790595482.566774,
+    "ast_hash": "167b62db5ecfe3114917ce0da73f2ecf",
     "semantic_hash": ""
   },
   "client/src/pages/TopicWise.jsx": {
@@ -439,19 +439,14 @@
     "ast_hash": "97323c34e4dd5ee83e67f3dd29b0b6c2",
     "semantic_hash": "97323c34e4dd5ee83e67f3dd29b0b6c2"
   },
-  "client/src/components/DiffViewer.jsx": {
-    "mtime": 1790594915.033381,
-    "ast_hash": "0a11080cc0c35768da3f1958db92103d",
-    "semantic_hash": ""
-  },
   "client/src/utils/diffUtils.js": {
-    "mtime": 1790594871.7140777,
-    "ast_hash": "d58e3c68a84dc444de2aebe75aef2bfd",
+    "mtime": 1790595327.5213926,
+    "ast_hash": "3ccd6aca66944512ddd7d5e402cb5875",
     "semantic_hash": ""
   },
   "client/src/utils/diffUtils.test.js": {
-    "mtime": 1790594881.3328357,
-    "ast_hash": "06fa08d6e4b48ea7f713a0c134991b66",
+    "mtime": 1790595343.67432,
+    "ast_hash": "5e571039d1ae641c481bde92b6541782",
     "semantic_hash": ""
   }
 }
