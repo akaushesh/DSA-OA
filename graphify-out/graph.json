@@ -3157,7 +3157,7 @@
       "label": "Attempt",
       "file_type": "code",
       "source_file": "server/src/models/attempt.model.js",
-      "source_location": "L25",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "models_attempt_model_attempt",
       "community": 7,
@@ -3277,7 +3277,7 @@
       "label": "Submission",
       "file_type": "code",
       "source_file": "server/src/models/submission.model.js",
-      "source_location": "L35",
+      "source_location": "L45",
       "_origin": "ast",
       "id": "models_submission_model_submission",
       "community": 7,
@@ -6679,9 +6679,9 @@
       "source_file": "client/src/components/TestCaseBox.jsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_testcasebox",
-      "target": "utils_diffutils",
-      "confidence_score": 1.0
+      "target": "utils_diffutils"
     },
     {
       "relation": "imports",
@@ -6690,9 +6690,9 @@
       "source_file": "client/src/components/TestCaseBox.jsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_testcasebox",
-      "target": "utils_diffutils_getboxdifftokens",
-      "confidence_score": 1.0
+      "target": "utils_diffutils_getboxdifftokens"
     },
     {
       "relation": "imports_from",
@@ -7467,9 +7467,9 @@
       "source_file": "client/src/utils/diffUtils.js",
       "source_location": "L194",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_diffutils",
-      "target": "utils_diffutils_getboxdifftokens",
-      "confidence_score": 1.0
+      "target": "utils_diffutils_getboxdifftokens"
     },
     {
       "relation": "contains",
@@ -7531,9 +7531,9 @@
       "source_file": "client/src/utils/diffUtils.js",
       "source_location": "L204",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_diffutils_getboxdifftokens",
-      "target": "utils_diffutils_computeoutputdiff",
-      "confidence_score": 1.0
+      "target": "utils_diffutils_computeoutputdiff"
     },
     {
       "relation": "imports",
@@ -7553,9 +7553,9 @@
       "source_file": "client/src/utils/diffUtils.test.js",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_diffutils_test",
-      "target": "utils_diffutils_getboxdifftokens",
-      "confidence_score": 1.0
+      "target": "utils_diffutils_getboxdifftokens"
     },
     {
       "relation": "contains",
@@ -7563,9 +7563,9 @@
       "source_file": "client/src/utils/diffUtils.test.js",
       "source_location": "L55",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_diffutils_test",
-      "target": "utils_diffutils_test_actdifftok",
-      "confidence_score": 1.0
+      "target": "utils_diffutils_test_actdifftok"
     },
     {
       "relation": "contains",
@@ -7573,9 +7573,9 @@
       "source_file": "client/src/utils/diffUtils.test.js",
       "source_location": "L52",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_diffutils_test",
-      "target": "utils_diffutils_test_boxactual",
-      "confidence_score": 1.0
+      "target": "utils_diffutils_test_boxactual"
     },
     {
       "relation": "contains",
@@ -7583,9 +7583,9 @@
       "source_file": "client/src/utils/diffUtils.test.js",
       "source_location": "L58",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_diffutils_test",
-      "target": "utils_diffutils_test_boxexpected",
-      "confidence_score": 1.0
+      "target": "utils_diffutils_test_boxexpected"
     },
     {
       "relation": "contains",
@@ -7623,9 +7623,9 @@
       "source_file": "client/src/utils/diffUtils.test.js",
       "source_location": "L61",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_diffutils_test",
-      "target": "utils_diffutils_test_expdifftok",
-      "confidence_score": 1.0
+      "target": "utils_diffutils_test_expdifftok"
     },
     {
       "relation": "contains",
@@ -11447,5 +11447,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "9e81304ac8946c45b7cc61af5c1691dc2b2e986d"
+  "built_at_commit": "6fcf267844b43f12476418dd4d2993361e2d92b3"
 }

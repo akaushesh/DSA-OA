@@ -29,7 +29,17 @@ const submissionSchema = new Schema({
   submittedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-submissionSchema.index({ attemptId: 1, submittedAt: 1 });
+// ponytail: prevent 32MB in-memory sort abort on queries across large submission documents
+submissionSchema.pre(/^find/, function () {
+  this.allowDiskUse(true);
+});
+
+submissionSchema.index({ userId: 1, submittedAt: -1 });
+submissionSchema.index({ userId: 1, problemId: 1, submittedAt: -1 });
+submissionSchema.index({ userId: 1, attemptId: 1, submittedAt: -1 });
+submissionSchema.index({ problemId: 1, submittedAt: -1 });
+submissionSchema.index({ submittedAt: -1 });
+submissionSchema.index({ attemptId: 1, submittedAt: 1, createdAt: 1 });
 submissionSchema.index({ questionSetId: 1, submittedAt: -1 });
 
 export const Submission = mongoose.model('Submission', submissionSchema, 'submissions');

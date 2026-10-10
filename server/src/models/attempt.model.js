@@ -18,8 +18,14 @@ const attemptSchema = new Schema({
 
 }, { timestamps: true });
 
+// ponytail: prevent 32MB in-memory sort abort on queries across attempts
+attemptSchema.pre(/^find/, function () {
+  this.allowDiskUse(true);
+});
+
 attemptSchema.index({ userId: 1, startedAt: -1 });
 attemptSchema.index({ questionSetId: 1, status: 1 });
 attemptSchema.index({ status: 1, startedAt: -1 });
+attemptSchema.index({ startedAt: -1 });
 
 export const Attempt = mongoose.model('Attempt', attemptSchema, 'attempts');
